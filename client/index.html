@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; connect-src 'self' ws://127.0.0.1:* ws://localhost:*; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'" />
+  <title>Dopaterm ✨ The Over-the-Top Terminal</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/polish.css" />
+  <link rel="stylesheet" href="/slot-real.css" />
+  <link rel="stylesheet" href="/cabinet-photo.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Layer 0: Fixed top bar (score HUD lives OUTSIDE the terminal area) -->
+    <header id="top-bar">
+      <div id="score-hud-container"></div>
+      <div id="top-bar-right"></div>
+    </header>
+
+    <!-- Layer 1: Background FX -->
+    <canvas id="bg-canvas"></canvas>
+    <div id="bg-css-fallback"></div>
+
+    <!-- Layer 2: Main Terminal View (Interactive) -->
+    <div id="session-tabs" class="hidden"></div>
+    <div id="terminal-container"></div>
+
+    <!-- Layer 2b: Connection Launcher — タイトル画面型。
+         上: ロゴ(固定) / 中: 接続先パネル(一覧のみスクロール) / 下: フッター(EXIT 固定) -->
+    <div id="launcher">
+      <div class="launcher-rays" aria-hidden="true"></div>
+      <div class="launcher-stage">
+        <div class="launcher-title">
+          <div class="launcher-bulbs" aria-hidden="true"></div>
+          <div class="launcher-logo" data-text="DOPATERM">DOPATERM</div>
+          <div class="launcher-tagline">THE OVER-THE-TOP TERMINAL</div>
+        </div>
+        <div class="launcher-panel">
+          <div class="launcher-sub">— SELECT YOUR MACHINE —</div>
+          <div class="launcher-options">
+            <button id="launcher-local" class="launcher-card launcher-card-local">
+              <span class="lc-icon">💻</span>
+              <span class="lc-text">
+                <span class="lc-title">ローカルターミナル</span>
+                <span class="lc-desc">このマシンのシェルを開く</span>
+              </span>
+              <span class="lc-go">START ▶</span>
+            </button>
+            <div class="launcher-card ssh-list-card">
+              <div class="ssh-card-head">
+                <span class="lc-icon">🔑</span>
+                <span class="lc-title">SSH 接続先</span>
+                <button id="launcher-new-ssh" class="btn-neon small">＋ 追加</button>
+              </div>
+              <div id="ssh-profile-list" class="ssh-profile-list"></div>
+            </div>
+          </div>
+        </div>
+        <div class="launcher-footer">
+          <button id="launcher-fx" class="launcher-fx" title="演出設定を開く">
+            <span class="lf-icon">🎛</span><span class="lf-label">演出設定</span>
+          </button>
+          <button id="launcher-exit" class="launcher-exit hidden">
+            <span class="lx-icon">⏻</span>
+            <span class="lx-label">EXIT</span>
+            <span class="lx-sub">DOPATERM を終了</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SSH プロファイル編集ダイアログ -->
+    <div id="ssh-dialog" class="hidden">
+      <div class="ssh-dialog-panel">
+        <div class="ssh-dialog-title">SSH 接続先の設定</div>
+        <label>接続名 <input id="ssh-name" type="text" placeholder="例: 開発サーバー" /></label>
+        <label>ホスト名 / IP <input id="ssh-host" type="text" placeholder="example.com" /></label>
+        <label>ポート <input id="ssh-port" type="number" value="22" min="1" max="65535" /></label>
+        <label>ユーザー名 <input id="ssh-user" type="text" placeholder="user" /></label>
+        <label>認証方法
+          <select id="ssh-auth">
+            <option value="agent">エージェント / ~/.ssh/config</option>
+            <option value="keyfile">秘密鍵ファイルを指定</option>
+            <option value="password">パスワード（接続時に入力）</option>
+          </select>
+        </label>
+        <label id="ssh-keypath-row" class="hidden">秘密鍵ファイル
+          <div class="ssh-keypath-input">
+            <input id="ssh-keypath" type="text" placeholder="~/.ssh/id_ed25519" />
+            <button id="ssh-keypath-browse" class="btn-neon small hidden">参照…</button>
+          </div>
+        </label>
+        <div class="ssh-dialog-note">※ 秘密鍵の内容・パスフレーズは保存されません。ホスト鍵の確認は接続時に端末内で行われます。</div>
+        <div id="ssh-dialog-error" class="ssh-dialog-error"></div>
+        <div class="ssh-dialog-actions">
+          <button id="ssh-save" class="btn-neon">保存</button>
+          <button id="ssh-save-connect" class="btn-neon">保存して接続</button>
+          <button id="ssh-cancel" class="btn-neon dim">キャンセル</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Layer 3: Over-the-Top Effects (pointer-events: none) -->
+    <div id="effect-overlay">
+      <!-- 余韻用の縁グロー（--dopa-heat で制御・非点滅） -->
+      <div id="edge-glow"></div>
+      <!-- 予兆: コマンド実行中に入力行の位置を発光（exec-charge で制御） -->
+      <div id="charge-glow"></div>
+      <canvas id="fx-canvas"></canvas>
+
+      <!-- Original SVG Mascot: Termi-Nyan -->
+      <div id="mascot-container"></div>
+
+      <!-- UI Cards, Combo Badges, Singularity Credits -->
+      <div id="ui-card-container"></div>
+    </div>
+
+    <!-- Layer 4: Interactive Demo Rig Showcase (Slide-out drawer) -->
+    <div id="demo-container"></div>
+
+    <!-- Layer 5: DOPA SLOT cabinet mount point -->
+    <div id="slot-container"></div>
+  </div>
+
+  <script type="module" src="/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3a1458"/>
+      <stop offset="0.55" stop-color="#16092a"/>
+      <stop offset="1" stop-color="#07030f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="46%" r="55%">
+      <stop offset="0" stop-color="#ff1b8d" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#7928ca" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="helmet" cx="35%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.65" stop-color="#e2dcf7"/>
+      <stop offset="1" stop-color="#8f98d6"/>
+    </radialGradient>
+    <linearGradient id="visor" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00f0ff"/>
+      <stop offset="0.5" stop-color="#ffe600"/>
+      <stop offset="1" stop-color="#ff1b8d"/>
+    </linearGradient>
+    <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fafafe"/>
+      <stop offset="0.45" stop-color="#8a8a98"/>
+      <stop offset="0.55" stop-color="#d8d8e4"/>
+      <stop offset="1" stop-color="#4a4a58"/>
+    </linearGradient>
+    <filter id="blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="14"/></filter>
+    <clipPath id="rr"><rect x="48" y="48" width="928" height="928" rx="214"/></clipPath>
+  </defs>
+
+  <rect x="48" y="48" width="928" height="928" rx="214" fill="url(#bg)"/>
+  <g clip-path="url(#rr)">
+    <rect x="48" y="48" width="928" height="928" fill="url(#glow)"/>
+    <!-- 放射ライン -->
+    <g transform="translate(512 470)" opacity="0.2" fill="#ff1b8d">
+      <g id="ray"><polygon points="0,0 -26,-640 26,-640"/></g>
+      <use href="#ray" transform="rotate(30)"/><use href="#ray" transform="rotate(60)"/>
+      <use href="#ray" transform="rotate(90)"/><use href="#ray" transform="rotate(120)"/>
+      <use href="#ray" transform="rotate(150)"/><use href="#ray" transform="rotate(180)"/>
+      <use href="#ray" transform="rotate(210)"/><use href="#ray" transform="rotate(240)"/>
+      <use href="#ray" transform="rotate(270)"/><use href="#ray" transform="rotate(300)"/>
+      <use href="#ray" transform="rotate(330)"/>
+    </g>
+    <!-- 下部: リールの帯 -->
+    <rect x="48" y="760" width="928" height="216" fill="#0a0614"/>
+    <rect x="48" y="756" width="928" height="10" fill="url(#chrome)"/>
+    <g font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="128" text-anchor="middle">
+      <rect x="196" y="790" width="190" height="150" rx="16" fill="#f4f0ff"/>
+      <rect x="417" y="790" width="190" height="150" rx="16" fill="#f4f0ff"/>
+      <rect x="638" y="790" width="190" height="150" rx="16" fill="#f4f0ff"/>
+      <text x="291" y="906" fill="#e1103a">7</text>
+      <text x="512" y="906" fill="#e1103a">7</text>
+      <text x="733" y="906" fill="#e1103a">7</text>
+    </g>
+  </g>
+
+  <!-- 耳 -->
+  <polygon points="262,430 232,170 470,300" fill="#ff1b8d" stroke="#171524" stroke-width="12" stroke-linejoin="round"/>
+  <polygon points="762,430 792,170 554,300" fill="#00f5d4" stroke="#171524" stroke-width="12" stroke-linejoin="round"/>
+  <!-- ヘルメット(発光) -->
+  <ellipse cx="512" cy="470" rx="290" ry="270" fill="#ff1b8d" opacity="0.45" filter="url(#blur)"/>
+  <ellipse cx="512" cy="470" rx="290" ry="270" fill="url(#helmet)" stroke="#171524" stroke-width="14"/>
+  <!-- バイザー -->
+  <rect x="252" y="352" width="520" height="250" rx="125" fill="#13111c" stroke="url(#visor)" stroke-width="18"/>
+  <!-- プロンプト ">_" -->
+  <g fill="none" stroke="#00f5d4" stroke-width="34" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="378,430 452,477 378,524"/>
+    <line x1="500" y1="540" x2="600" y2="540"/>
+  </g>
+  <g fill="none" stroke="#00f5d4" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" opacity="0.5" filter="url(#blur)">
+    <polyline points="378,430 452,477 378,524"/>
+    <line x1="500" y1="540" x2="600" y2="540"/>
+  </g>
+  <!-- アンテナ -->
+  <path d="M512 205 Q512 130 600 118" fill="none" stroke="#ffe600" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="612" cy="116" r="32" fill="#ffe600" stroke="#ff6b00" stroke-width="10"/>
+  <circle cx="600" cy="104" r="9" fill="#fff" opacity="0.85"/>
+  <!-- 手 -->
+  <circle cx="190" cy="560" r="52" fill="#fff" stroke="#00f5d4" stroke-width="14"/>
+  <circle cx="834" cy="560" r="52" fill="#fff" stroke="#ff1b8d" stroke-width="14"/>
+  <!-- 外周リム -->
+  <rect x="48" y="48" width="928" height="928" rx="214" fill="none" stroke="url(#chrome)" stroke-width="14"/>
+  <rect x="62" y="62" width="900" height="900" rx="200" fill="none" stroke="#ff1b8d" stroke-width="6" opacity="0.8"/>
+</svg>

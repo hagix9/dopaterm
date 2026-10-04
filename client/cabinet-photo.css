@@ -1,0 +1,278 @@
+/* ============================================================
+ * DOPA SLOT — 写真筐体モード（dopa-real/dopa.jpeg を正本とする）
+ *
+ * このスタイルシートは既存のスロット筐体を「別モード」で上書きする。
+ * 既存の CSS 筐体（slot-real.css / polish.css）は削除せず、
+ * #app に .cab-photo が無いときは従来どおり displaying される。
+ *
+ * 座標は元画像 1024x640 の実測値。各領域は画像寸法の比率で
+ * パーセント指定にしているため、筐体を等比拡大/縮小しても
+ * 開口部とクリック領域はずれない。
+ *
+ *   terminal  x 203 y 118  w 618 h 216
+ *   reelL     x 204 y 356  w 210 h 111
+ *   reelC     x 435 y 356  w 151 h 112
+ *   reelR     x 606 y 356  w 215 h 112
+ *   lever     x  92 y 396  w  64 h 129
+ *   stopL     x 363 y 524  w  64 h  64
+ *   stopC     x 481 y 526  w  64 h  64
+ *   stopR     x 596 y 524  w  64 h  64
+ *   nyanLamp  x 414 y 484  w 196 h  24
+ *   seg-credit/win/count （右側の 7 セグ表示）
+ * ============================================================ */
+
+#app.cab-photo #slot-container {
+  /* タブストリップ（top 42 / 高さ 34）が #slot-container より下にあるため、
+     筐体がタブを覆わないように上から 36px 空きを作る。
+     タブの ×（セッションを閉じる）にアクセスできる状態を維持する。 */
+  align-items: flex-start;
+  padding-top: 36px;
+  box-sizing: border-box;
+}
+
+/* 7 セグは元画像の右側にのみ存在する。従来の CSS 筐体には無いので通常は隠す。 */
+.cab-seg { display: none; }
+
+/* ---------------- 筐体: 元画像をそのまま、縦横比を固定して等比表示 ---------------- */
+#app.cab-photo .slot-cabinet {
+  /* 元画像 1024x640 = 1.6。幅は高さから決めて、窓の横幅が変わっても比率が崩れない。 */
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  width: min(100%, calc((100vh - var(--topbar-h) - 46px) * 1.6));
+  height: auto;
+  aspect-ratio: 1024 / 640;
+  max-width: none;
+  margin: 0 auto 8px;
+  padding: 0;
+  border: none;
+  border-image: none;
+  border-radius: 0;
+  background: url('./assets/cabinet/dopa-cabinet-4k.webp') center / 100% 100% no-repeat;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.85),
+    0 0 120px rgba(255, 27, 141, 0.22);
+  overflow: visible;
+}
+/* 画像側に既にすべて描かれているため、CSS 側の装飾は隠す */
+#app.cab-photo .cab-marquee,
+#app.cab-photo .side-lamps,
+#app.cab-photo .reel-flank,
+#app.cab-photo .paylines,
+#app.cab-photo .payline-mark,
+#app.cab-photo .medal-tray,
+#app.cab-photo .bet-plate,
+#app.cab-photo .coin-plate,
+#app.cab-photo .lever-label,
+#app.cab-photo .win-line { display: none !important; }
+
+/* 画像の周囲に落ちる柔らかい影（照明効果のみ。質感は画像が担当する） */
+#app.cab-photo .slot-cabinet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background: radial-gradient(ellipse 70% 60% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+/* ---------------- 上部開口部 = ターミナル ---------------- */
+#app.cab-photo .cab-window-row {
+  position: absolute;
+  left: 19.8242%;
+  top: 18.4375%;
+  width: 60.3516%;
+  height: 33.75%;
+  display: block;
+}
+#app.cab-photo .reel-window-frame {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  border-image: none;
+  background: none;
+  box-shadow: none;
+}
+#app.cab-photo .reel-window-bezel {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  background: #05030c;
+  box-shadow: inset 0 0 26px rgba(0, 0, 0, 0.9);
+}
+#app.cab-photo .reel-window-bezel::after { opacity: 0.12; }
+
+/* ---------------- 下部 3 開口部 = リール ---------------- */
+#app.cab-photo .cab-reels {
+  position: absolute;
+  inset: 0;
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+#app.cab-photo .reel-center { position: static; display: block; }
+#app.cab-photo .reel-bank {
+  position: absolute;
+  inset: 0;
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  filter: none;
+  --cell: 33.3333%;
+}
+/* 3 本とも幅が違う（元画像の開口部が等幅ではないため実測値をそのまま使う） */
+#app.cab-photo .reel-win {
+  position: absolute;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  box-shadow: none;
+}
+#app.cab-photo .reel-win:nth-of-type(1) { left: 19.9219%; top: 55.625%;   width: 20.5078%; height: 17.3438%; }
+#app.cab-photo .reel-win:nth-of-type(2) { left: 42.4805%; top: 55.625%;   width: 14.7461%; height: 17.5%;    }
+#app.cab-photo .reel-win:nth-of-type(3) { left: 59.1797%; top: 55.625%;   width: 20.9961%; height: 17.5%;    }
+/* リールの円筒陰影は既存のレイヤー素材（reel-shade / reel-glare）がそのまま担当する */
+
+/* 回転ストリップは 16 コマ。ストリップ自体に高さを与え、コマの高さを
+   「ストリップ高さの 1/16」で解決させる（% の基準を .reel-win に揃えるため）。
+   16 コマ = 窓の 16/3 倍、8 コマ分（半周）ずらすので継ぎ目が出ない。 */
+#app.cab-photo .reel-strip { height: 533.3333%; }
+#app.cab-photo .reel-strip > .reel-sym { height: 6.25%; }
+#app.cab-photo .reel-win.spinning .reel-strip { animation-name: cab-photo-strip-roll; }
+@keyframes cab-photo-strip-roll {
+  from { transform: translateY(-50%); }
+  to   { transform: translateY(0); }
+}
+#app.cab-photo .reel-glass { background-size: 100% 100%; }
+
+/* ---------------- 告知ランプ: 画像の NYAN LAMP 帯の上で光らせる ---------------- */
+#app.cab-photo .notice-lamp {
+  left: 40.4297%;
+  bottom: auto;
+  top: 75.625%;
+  width: 19.1406%;
+  height: 3.75%;
+  transform: none;
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  animation: none;
+}
+#app.cab-photo .notice-lamp::after,
+#app.cab-photo .nl-ear,
+#app.cab-photo .nl-face,
+#app.cab-photo .nl-cap { display: none; }
+#app.cab-photo .notice-lamp {
+  background: radial-gradient(ellipse at 22% 50%, rgba(255, 40, 130, 0) 0%, rgba(255, 40, 130, 0) 100%);
+}
+/* 待機中: ごく弱い放光。当たり時: 画像の帯ごと強く光る */
+#app.cab-photo .notice-lamp { filter: drop-shadow(0 0 3px rgba(255, 60, 150, 0.35)); }
+#app.cab-photo .slot-cabinet.cab-win .notice-lamp,
+#app.cab-photo .slot-cabinet.cab-triple .notice-lamp,
+#app.cab-photo .slot-cabinet.cab-jackpot .notice-lamp {
+  filter: drop-shadow(0 0 10px rgba(255, 210, 90, 0.95)) drop-shadow(0 0 20px rgba(255, 40, 130, 0.8));
+}
+
+/* ---------------- 操作部: 画像のレバー / 停止ボタンへ透明クリック領域を重ねる ---------------- */
+#app.cab-photo .cab-panel {
+  position: absolute;
+  inset: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+#app.cab-photo .cab-panel::before { display: none; }
+#app.cab-photo .lever-mount {
+  position: absolute;
+  left: 8.9844%;
+  top: 61.875%;
+  width: 6.25%;
+  height: 20.1563%;
+}
+#app.cab-photo .stop-cluster { position: absolute; inset: 0; display: block; }
+/* 見た目は画像に任せる。クリック領域だけを stopped/lever の位置に置く。 */
+#app.cab-photo .stop-btn {
+  position: absolute;
+  width: 6.25%;
+  height: 10%;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  filter: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+#app.cab-photo .stop-btn[data-reel='0'] { left: 35.4492%; top: 81.875%; }
+#app.cab-photo .stop-btn[data-reel='1'] { left: 46.9727%; top: 82.1875%; }
+#app.cab-photo .stop-btn[data-reel='2'] { left: 58.2031%; top: 81.875%; }
+/* 元画像のレバー（球 + シャフト）にクリック領域を置く */
+#app.cab-photo .slot-lever {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  background: none;
+  filter: none;
+  cursor: pointer;
+  animation: none;
+  border-radius: 12px;
+}
+#app.cab-photo .slot-lever:hover { filter: brightness(1.35); }
+#app.cab-photo .slot-lever .lever-shaft,
+#app.cab-photo .slot-lever .lever-ball,
+#app.cab-photo .lever-base { display: none; }
+
+/* 押下/点灯のフィードバックは「見た目ではなく光」で返す（画像は変更しない） */
+#app.cab-photo .stop-btn:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  box-shadow: 0 0 14px 4px rgba(255, 60, 120, 0.45);
+  animation: cab-photo-breath 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+#app.cab-photo .stop-btn:active:not(:disabled)::after,
+#app.cab-photo .stop-btn.btn-pressed::after { box-shadow: 0 0 26px 8px rgba(255, 210, 120, 0.85); animation: none; }
+#app.cab-photo .stop-btn:disabled::after { animation: none; opacity: 0; }
+#app.cab-photo .stop-btn .btn-cap,
+#app.cab-photo .stop-btn .btn-text { display: none; }
+@keyframes cab-photo-breath { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* ---------------- 右側 7 セグ表示: CREDIT / WIN / COUNT ---------------- */
+#app.cab-photo .cab-seg {
+  display: flex;
+  position: absolute;
+  left: 85.2539%;
+  width: 3.9063%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 2.1cqw/1 var(--dopa-font-mono, monospace);
+  color: #ff5a4a;
+  text-shadow: 0 0 6px rgba(255, 60, 40, 0.9), 0 0 14px rgba(255, 0, 0, 0.6);
+  letter-spacing: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+#app.cab-photo .seg-credit { top: 22.8125%; height: 4.6875%; }
+#app.cab-photo .seg-win    { top: 31.4063%; height: 3.9063%; }
+#app.cab-photo .seg-count  { top: 38.5938%; height: 4.375%;  }
+#app.cab-photo .seg-win.is-hot { color: #ffd76a; text-shadow: 0 0 8px #ffde59, 0 0 18px rgba(255, 190, 40, 0.8); }
+
+/* ---------------- 小さいウィンドウ: 画像が等比縮小されても座標が合うので縮めるだけ ---------------- */
+@media (max-height: 560px) {
+  #app.cab-photo .slot-cabinet { width: min(100%, calc((100vh - var(--topbar-h) - 50px) * 1.6)); }
+}

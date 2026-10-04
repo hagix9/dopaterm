@@ -1,0 +1,618 @@
+/* ============================================================
+ * DOPA SLOT 写実筐体（Dopaterm 独自）
+ *
+ * 部品はすべて PBR レンダリングした画像素材（client/assets/slot/・生成元は tools/slot-assets）。
+ * 画像は「操作可能な部品」ごとに独立しており、状態(点灯/押下/回転)は CSS で重ねる:
+ *   塗装樹脂の外枠 / クロームの細枠 / 3連リール(白色バックライトの印刷フィルム+円筒陰影)
+ *   / クロームのリング+樹脂レンズの停止ボタン / 8コマのレバー / ドームランプ / 金属ロゴ
+ * ターミナルの祖先には transform を使わない（xterm 座標・IME 保護）。
+ * ============================================================ */
+
+@keyframes stop-breath {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.22); }
+}
+@keyframes lamp-breath {
+  0%, 100% { opacity: 0.82; }
+  50% { opacity: 1; }
+}
+
+/* ---------------- 筐体の外枠（塗装樹脂 9-slice） ---------------- */
+.slot-cabinet {
+  --cell: clamp(24px, 6.2cqi, 40px);
+  --reel-w: clamp(50px, 17cqi, 112px);
+  --frame: 16px;
+  /* 内部のパーツは「筐体の幅」に追従させる（ビューポート基準だと
+     筐体が細くなったときにリールバンクがはみ出すため）。 */
+  container-type: inline-size;
+  container-name: cab;
+  /* 実機のパチスロ筐体は「縦長」。画面幅ではなく高さから幅を決めることで、
+     ニューパルサー系の比率（高さ/幅 ≒ 1.2〜1.3）に寄せる。
+     ただしターミナル幅を潰しすぎないよう、幅には上限を設ける。 */
+  flex: 0 0 auto;
+  width: min(100%, clamp(430px, calc((100vh - 128px) * 0.95), 720px));
+  margin: 6px auto;
+  grid-template-rows: auto 1fr auto auto auto;
+  gap: 6px;
+  padding: 6px 8px 2px;
+  border: var(--frame) solid transparent;
+  border-image: url('./assets/slot/body-frame.png') 105 / var(--frame) stretch;
+  border-radius: 30px;
+  background:
+    url('./assets/slot/paint-grain.png') 0 0 / 220px 220px,
+    radial-gradient(ellipse at 50% -8%, rgba(255, 27, 141, 0.2), transparent 52%),
+    linear-gradient(170deg, #1d1030 0%, #0e0719 55%, #07040e 100%);
+  background-blend-mode: overlay, normal, normal;
+  background-clip: padding-box;
+  box-shadow:
+    0 26px 60px rgba(0, 0, 0, 0.88),
+    0 0 52px rgba(255, 27, 141, 0.34),
+    0 0 100px rgba(0, 245, 212, 0.1);
+  overflow: hidden;
+}
+/* 塗装面に映る窓明かり（斜めのやわらかい反射） */
+.slot-cabinet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  background: linear-gradient(112deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 24%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, 0.035) 100%);
+}
+/* 光の回り込み: 当たり時に枠の内側が発光する */
+.slot-cabinet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 31;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 rgba(255, 222, 89, 0);
+  transition: box-shadow 0.35s ease;
+}
+.slot-cabinet.cab-win::after,
+.slot-cabinet.cab-triple::after,
+.slot-cabinet.cab-jackpot::after {
+  box-shadow: inset 0 0 36px 4px rgba(255, 222, 89, 0.5), inset 0 0 90px 10px rgba(255, 27, 141, 0.28);
+}
+
+/* ---------------- パネル継ぎ目: 上段/中段/操作部の境に挟むクロームの段差 ---------------- */
+/* 実機では上下のパネルが別々の樹脂でできており、境に金属の継ぎ目と影が入っている。
+   ここも同じ考えで seam-chrome.png（3D レンダリング）を配置する。 */
+.cab-window-row::after,
+.cab-reels::after {
+  content: '';
+  position: absolute;
+  left: 1%;
+  right: 1%;
+  height: 7px;
+  pointer-events: none;
+  z-index: 9;
+  background: url('./assets/slot/seam-chrome.png') center / 100% 100% no-repeat;
+  opacity: 0.9;
+}
+.cab-window-row::after { bottom: -11px; }
+.cab-reels::after { bottom: -13px; }
+.cab-window-row, .cab-reels { position: relative; }
+
+/* ---------------- 台上: ドームランプ + バックライト上パネル ---------------- */
+.cab-marquee { display: flex; align-items: center; gap: 8px; }
+.cab-marquee .marquee-frame {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  padding: 0 12px;
+  border: 8px solid transparent;
+  border-image: url('./assets/slot/bezel-chrome.png') 90 / 8px stretch;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 34%),
+    repeating-conic-gradient(from 0deg at 50% 130%, rgba(255, 27, 141, 0.16) 0 5deg, transparent 5deg 10deg),
+    radial-gradient(ellipse at 50% 120%, #ff3ea0 0%, #6c1a74 38%, #1a0a2c 78%);
+  background-clip: padding-box;
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+.marquee-lamps-bottom, .marquee-sub { display: none; }
+.marquee-lamps { padding: 0 6px; }
+/* 小型ランプ: すべて同じ 3D レンダリングのレンズ（金具＋樹脂ドーム）を使う。
+   CSS の radial-gradient による「絵的な灯」ではなく、実際の金具として描く。 */
+.m-lamp, .s-lamp, .bet-lamps i {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: url('./assets/slot/lamp-lens-off.png') center / 100% 100% no-repeat;
+  box-shadow: none;
+}
+.m-lamp.lamp-on, .s-lamp.lamp-on, .bet-lamps i {
+  background-image: url('./assets/slot/lamp-lens-on.png');
+  filter: drop-shadow(0 0 5px rgba(255, 90, 140, 0.9));
+}
+.marquee-inner { padding: 1px 0; }
+/* 金属ロゴ（高さマップ→法線→ゴールドのマットキャップで生成した立体文字） */
+.marquee-logo {
+  height: clamp(22px, 3.8vh, 34px);
+  aspect-ratio: 1400 / 220;
+  width: auto;
+  margin: 0 auto;
+  background: url('./assets/slot/logo-dopaslot.png') center / contain no-repeat;
+  font-size: 0;
+  letter-spacing: 0;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 0 7px rgba(255, 170, 60, 0.55)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8));
+  transition: filter 0.3s;
+}
+/* ランク/状態は色相で表現（従来のテキスト色の代わり） */
+.slot-cabinet.cab-fever .marquee-logo { filter: hue-rotate(-38deg) saturate(1.3) drop-shadow(0 0 10px rgba(255, 60, 140, 0.8)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+.slot-cabinet.cab-hyper .marquee-logo { filter: hue-rotate(150deg) saturate(1.2) drop-shadow(0 0 12px rgba(150, 90, 255, 0.85)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+.slot-cabinet.cab-singularity .marquee-logo { filter: grayscale(1) brightness(1.6) drop-shadow(0 0 14px #fff) drop-shadow(0 0 28px rgba(255, 0, 127, 0.9)); }
+.slot-cabinet.cab-heated .marquee-logo { filter: saturate(1.25) brightness(1.1) drop-shadow(0 0 10px rgba(255, 140, 40, 0.8)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+.slot-cabinet.cab-blazing .marquee-logo { filter: saturate(1.5) brightness(1.25) drop-shadow(0 0 14px rgba(255, 90, 20, 0.95)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+.slot-cabinet.cab-warning .marquee-logo { filter: hue-rotate(-52deg) saturate(2.2) drop-shadow(0 0 12px rgba(255, 30, 30, 0.95)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+
+.dome-lamp {
+  flex: none;
+  position: relative;
+  width: clamp(40px, 6.2vh, 56px);
+  aspect-ratio: 1;
+  align-self: center;
+}
+.dome-lamp::before {            /* 周囲に落ちる光 */
+  content: '';
+  position: absolute;
+  inset: -40%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 27, 141, 0.38), transparent 62%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: lamp-breath 2.6s ease-in-out infinite;
+}
+.dome-right::before { background: radial-gradient(circle, rgba(0, 245, 212, 0.34), transparent 62%); animation-delay: 1.3s; }
+.dl-glow {
+  position: absolute;
+  inset: 19%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 56%, #ff9ec0 0%, #e0235f 42%, #6b0b2c 100%);
+  box-shadow: inset 0 -7px 10px rgba(0, 0, 0, 0.45);
+  animation: lamp-breath 2.6s ease-in-out infinite;
+}
+.dome-right .dl-glow { background: radial-gradient(circle at 50% 56%, #b5fff3 0%, #12c9b0 42%, #05514a 100%); animation-delay: 1.3s; }
+.dl-ring, .dl-glass { position: absolute; inset: 0; pointer-events: none; background: center / 100% 100% no-repeat; }
+.dl-ring { background-image: url('./assets/slot/dome-ring.png'); filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.7)); }
+.dl-glass { background-image: url('./assets/slot/dome-glass.png'); mix-blend-mode: screen; opacity: 0.9; }
+.slot-cabinet.cab-win .dl-glow,
+.slot-cabinet.cab-triple .dl-glow,
+.slot-cabinet.cab-jackpot .dl-glow { filter: brightness(1.5) saturate(1.2); box-shadow: 0 0 22px 6px rgba(255, 222, 89, 0.8), inset 0 -7px 10px rgba(0, 0, 0, 0.3); }
+.slot-cabinet.cab-win .dome-lamp::before,
+.slot-cabinet.cab-triple .dome-lamp::before,
+.slot-cabinet.cab-jackpot .dome-lamp::before { inset: -80%; background: radial-gradient(circle, rgba(255, 222, 89, 0.55), transparent 60%); }
+
+/* ---------------- 上部液晶（=ターミナル）: クロームの細枠 + ガラス ---------------- */
+.cab-window-row { grid-template-columns: 18px 1fr 18px; gap: 6px; }
+.side-lamps {
+  border-radius: 6px;
+  background: linear-gradient(90deg, #0a0610, #1a1226 50%, #0a0610);
+  border: 1px solid #4a3d5c;
+  box-shadow: inset 0 0 8px #000, 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.reel-window-frame {
+  padding: 0;
+  border: 13px solid transparent;
+  border-image: url('./assets/slot/bezel-chrome.png') 90 / 13px stretch;
+  border-radius: 14px;
+  background: #03020a;
+  background-clip: padding-box;
+  box-shadow: none;
+}
+.reel-window-bezel {
+  border-radius: 4px;
+  background: #05030c;
+  box-shadow: inset 0 3px 18px rgba(0, 0, 0, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.reel-window-bezel::after {     /* 液晶ガラスの映り込み（低アルファ: 文字の可読性を優先） */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: url('./assets/slot/glass-glare.png') 0 0 / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+  opacity: 0.2;
+}
+.win-line { display: none; }
+
+/* ---------------- 中パネル: 左 | 3連リール | 右 ---------------- */
+.cab-reels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px 14px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 18%),
+    linear-gradient(180deg, #1b1128, #09050f);
+  border: 1px solid #4d3f62;
+  box-shadow: inset 0 3px 12px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.reel-flank { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.flank-left { align-items: flex-end; }
+.flank-right { align-items: flex-start; }
+.reel-flank .info-seg {
+  width: 100%;
+  max-width: 150px;
+  flex: none;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #020104, #0b0612);
+  border: 1px solid #3a2f4a;
+  box-shadow: inset 0 2px 8px #000, 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 筐体がかなり細くなったときだけ、リール窓を主役にして脇の表示を畳む。
+   （XP/FP/COMBO/LV の 7seg は実用的な数値なので、通常幅では必ず残す） */
+@container cab (max-width: 430px) {
+  .reel-flank { display: none; }
+  .cab-reels { grid-template-columns: 1fr; }
+  .reel-bank { justify-self: center; }
+}
+@container cab (max-width: 360px) {
+  .ind-row { display: none; }
+}
+.seg-digits { text-shadow: 0 0 6px currentColor, 0 0 14px currentColor; }
+.ind-row { display: flex; gap: 4px; }
+.ind-lamp {
+  font: 700 8px/1 var(--dopa-font-mono, monospace);
+  letter-spacing: 1px;
+  padding: 3px 5px;
+  border-radius: 3px;
+  color: #5a4a70;
+  background: linear-gradient(180deg, #1b1226, #0e0916);
+  border: 1px solid #33283f;
+  transition: color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.ind-insert { color: #ffc2d1; background: linear-gradient(180deg, #5a1630, #3a0c1e); box-shadow: 0 0 9px rgba(255, 27, 141, 0.55); }
+.slot-cabinet:not(:has(.reel-win.spinning)) .ind-start { color: #c9fff6; background: linear-gradient(180deg, #0c5a50, #07342e); box-shadow: 0 0 9px rgba(0, 245, 212, 0.6); }
+.slot-cabinet.cab-win .ind-win,
+.slot-cabinet.cab-triple .ind-win,
+.slot-cabinet.cab-jackpot .ind-win { color: #fff6c0; background: linear-gradient(180deg, #7a5a00, #4a3600); box-shadow: 0 0 14px rgba(255, 222, 89, 0.9); }
+.slot-cabinet.cab-lose .ind-replay { color: #e3d2ff; background: linear-gradient(180deg, #44287a, #2a1650); box-shadow: 0 0 9px rgba(160, 110, 255, 0.6); }
+
+.reel-center { position: relative; display: flex; flex-direction: column; align-items: center; }
+.reel-bank {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  border: 11px solid transparent;
+  border-image: url('./assets/slot/bezel-chrome.png') 90 / 11px stretch;
+  border-radius: 14px;
+  background: #020106;
+  background-clip: padding-box;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.7));
+}
+.reel-bank .payline-mark { position: absolute; top: 50%; transform: translateY(-50%); font-size: 13px; color: #ff4d86; text-shadow: 0 0 8px #ff1b8d; }
+.payline-l { left: -30px; }
+.payline-r { right: -30px; }
+.paylines { position: absolute; inset: 5px; width: calc(100% - 10px); height: calc(100% - 10px); pointer-events: none; z-index: 6; }
+.paylines .pl { stroke: rgba(255, 70, 120, 0.35); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.paylines .pl-mid { stroke: rgba(255, 70, 120, 0.8); stroke-width: 1.6; }
+.paylines .pl-d1, .paylines .pl-d2 { stroke-dasharray: 3 4; stroke: rgba(255, 70, 120, 0.25); }
+.slot-cabinet:has(.reel-win.hit) .paylines .pl-mid { stroke: #ffde59; filter: drop-shadow(0 0 4px #ffde59); }
+
+/* リール: 白色バックライトの印刷フィルム + 円筒の陰影 + 窓の映り込み */
+.reel-win {
+  position: relative;
+  isolation: isolate;
+  width: var(--reel-w);
+  height: calc(var(--cell) * 3);
+  overflow: hidden;
+  border: none;
+  border-radius: 2px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 70%),
+    linear-gradient(90deg, #b7acd6 0%, #f3effc 24%, #fffdfa 50%, #f3effc 76%, #b7acd6 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+}
+.reel-col, .reel-strip { display: flex; flex-direction: column; align-items: stretch; }
+.reel-col { position: absolute; inset: 0; gap: 0; }
+.reel-strip { position: absolute; left: 0; right: 0; top: 0; display: none; will-change: transform; }
+.reel-win .reel-nb, .reel-win .reel-cell, .reel-sym {
+  height: var(--cell);
+  width: 100%;
+  display: block;
+  flex: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  filter: none;
+  animation: none;
+  background: center / auto 86% no-repeat;
+  /* テキスト(判定に使う値)は視覚的に隠し、画像の図柄を表示 */
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  text-shadow: none;
+}
+[data-s="0"] { background-image: url('./assets/slot/sym-0.png') !important; }
+[data-s="1"] { background-image: url('./assets/slot/sym-1.png') !important; }
+[data-s="2"] { background-image: url('./assets/slot/sym-2.png') !important; }
+[data-s="3"] { background-image: url('./assets/slot/sym-3.png') !important; }
+[data-s="4"] { background-image: url('./assets/slot/sym-4.png') !important; }
+[data-s="5"] { background-image: url('./assets/slot/sym-5.png') !important; }
+[data-s="6"] { background-image: url('./assets/slot/sym-6.png') !important; }
+[data-s="7"] { background-image: url('./assets/slot/sym-7.png') !important; }
+.reel-glass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url('./assets/slot/reel-shade.png') 0 0 / 100% 100% no-repeat;
+}
+.reel-glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('./assets/slot/reel-glare.png') 0 0 / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+}
+.reel-win.spinning .reel-strip { display: flex; animation: strip-roll var(--roll, 0.36s) linear infinite; filter: blur(1.1px) brightness(1.08); }
+.reel-win.spinning .reel-col { visibility: hidden; }
+@keyframes strip-roll {
+  from { transform: translateY(calc(var(--cell) * -8)); }
+  to { transform: translateY(0); }
+}
+.reel-win.landed .reel-col { animation: reel-settle 0.34s cubic-bezier(0.2, 1.8, 0.4, 1); }
+@keyframes reel-settle {
+  0% { transform: translateY(calc(var(--cell) * -0.35)); }
+  100% { transform: translateY(0); }
+}
+.reel-win.hit { box-shadow: inset 0 0 0 1px #ffde59, 0 0 22px 4px rgba(255, 222, 89, 0.75); }
+.reel-win.hit .reel-glass { animation: reel-hit 0.9s ease-in-out 3; }
+@keyframes reel-hit {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.45) saturate(1.3); }
+}
+
+/* 告知ランプ: Termi-Nyan のドーム（リール枠の下端にまたがって取り付け） */
+.notice-lamp {
+  position: absolute;
+  left: 50%;
+  bottom: -19px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 16px 3px 12px;
+  border-radius: 18px 18px 8px 8px;
+  background: linear-gradient(180deg, #34264a, #130b22);
+  border: 2px solid #b5afc4;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 4px 6px rgba(0, 0, 0, 0.7);
+  z-index: 8;
+}
+.notice-lamp::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 45%);
+}
+.nl-ear { position: absolute; top: -9px; width: 14px; height: 12px; background: #4a3866; clip-path: polygon(0 100%, 50% 0, 100% 100%); }
+.nl-ear-l { left: 12px; }
+.nl-ear-r { right: 12px; }
+.nl-face { font: 900 15px/1 var(--dopa-font-mono, monospace); color: #54426f; letter-spacing: 3px; transition: color 0.2s, text-shadow 0.2s; }
+.nl-cap { font: 700 8px/1 var(--dopa-font-mono, monospace); letter-spacing: 3px; color: #7a6a92; }
+.slot-cabinet.cab-win .notice-lamp,
+.slot-cabinet.cab-triple .notice-lamp,
+.slot-cabinet.cab-jackpot .notice-lamp {
+  background: linear-gradient(180deg, #4a3480, #20143a);
+  border-color: #ffde59;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5), 0 0 22px rgba(255, 222, 89, 0.8), 0 0 46px rgba(255, 27, 141, 0.5);
+}
+.slot-cabinet.cab-win .nl-face,
+.slot-cabinet.cab-triple .nl-face,
+.slot-cabinet.cab-jackpot .nl-face { color: #00f5d4; text-shadow: 0 0 10px #00f5d4, 0 0 22px #00f5d4; }
+.slot-cabinet.cab-jackpot .notice-lamp,
+.slot-cabinet.cab-triple .notice-lamp { animation: nyan-rainbow 2.4s linear infinite; }
+@keyframes nyan-rainbow { to { filter: hue-rotate(360deg); } }
+
+/* ---------------- 操作デッキ: 張り出した成形品（3D レンダリング画像） ---------------- */
+/* 天面は deck-top.png（立ち上がった成形リブ + 沈んだヘアライン仕上げの操作面 +
+   前端のクローム lip + 奥の段差）。その下に見える前立て面は deck-fascia.png。
+   都是以画像素材であり、CSS のグラデーションで質感を代替していない。 */
+.cab-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px 84px minmax(0, 1fr) 112px;
+  align-items: center;
+  gap: 10px;
+  margin: 10px -2px 0;
+  padding: 10px 14px 16px;
+  border: none;
+  border-radius: 20px 20px 6px 6px;
+  background:
+    url('./assets/slot/deck-top.png') center top / 100% calc(100% - 15px) no-repeat,
+    url('./assets/slot/deck-fascia.png') center bottom / 100% 15px no-repeat,
+    #0b0714;
+  box-shadow:
+    0 -5px 16px rgba(0, 0, 0, 0.7),   /* 天面が machine 本体から浮く影 */
+    0 3px 0 #07040c;
+}
+  /* デッキ上の部品が天面に落とす柔らかい接地影（照明効果のため CSS でよい） */
+.cab-panel::before {
+  content: '';
+  position: absolute;
+  inset: 26% 4% 18%;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 34px 12px at 12% 62%, rgba(0, 0, 0, 0.55), transparent 70%),
+    radial-gradient(ellipse 40px 12px at 50% 58%, rgba(0, 0, 0, 0.45), transparent 70%),
+    radial-gradient(ellipse 40px 12px at 74% 58%, rgba(0, 0, 0, 0.45), transparent 70%),
+    radial-gradient(ellipse 30px 10px at 91% 62%, rgba(0, 0, 0, 0.5), transparent 70%);
+}
+.cab-panel > * { position: relative; z-index: 1; }
+
+/* 停止ボタン: クロームのリング + 樹脂レンズ。押すとレンズが沈む */
+.stop-cluster { display: flex; gap: clamp(14px, 3.4vw, 36px); justify-content: center; align-items: center; }
+.stop-btn {
+  position: relative;
+  width: clamp(50px, 9.4vh, 74px);
+  aspect-ratio: 1;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: url('./assets/slot/stop-ring.png') center / 100% 100% no-repeat;
+  box-shadow: none;
+  filter: drop-shadow(0 7px 5px rgba(0, 0, 0, 0.7));
+  transition: transform 0.06s;
+}
+.stop-btn::before {          /* 点灯時にデッキ面へ落ちる光 */
+  content: '';
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(255, 45, 120, 0);
+  transition: box-shadow 0.2s;
+  pointer-events: none;
+}
+.stop-btn:not(:disabled)::before { box-shadow: 0 0 26px 8px rgba(255, 45, 120, 0.6); animation: lamp-breath 1.4s ease-in-out infinite; }
+.slot-cabinet .stop-btn .btn-cap {
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  background: url('./assets/slot/stop-lens-off.png') center / 100% 100% no-repeat;
+  box-shadow: none;
+  transition: transform 0.06s ease-out, filter 0.15s;
+}
+.slot-cabinet .stop-btn .btn-cap::after { display: none; }
+.slot-cabinet .stop-btn:not(:disabled) .btn-cap { background: url('./assets/slot/stop-lens-on.png') center / 100% 100% no-repeat; box-shadow: none; animation: stop-breath 1.4s ease-in-out infinite; }
+.stop-btn .btn-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  font: 900 clamp(15px, 2.6vh, 20px)/1 'Arial Black', sans-serif;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 0 rgba(120, 0, 30, 0.8), 0 0 9px rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  transform: translateY(-3%);
+  transition: transform 0.06s ease-out;
+}
+.stop-btn:disabled { cursor: default; filter: drop-shadow(0 7px 5px rgba(0, 0, 0, 0.7)) saturate(0.85) brightness(0.85); }
+.slot-cabinet .stop-btn:active:not(:disabled) .btn-cap,
+.slot-cabinet .stop-btn.btn-pressed .btn-cap { background: url('./assets/slot/stop-lens-on.png') center / 100% 100% no-repeat; box-shadow: none; transform: translateY(5%) scale(0.955); animation: none; filter: brightness(1.25); }
+.stop-btn:active:not(:disabled) .btn-text,
+.stop-btn.btn-pressed .btn-text { transform: translateY(2%) scale(0.95); }
+
+/* スタートレバー: 8コマの3Dレンダリング。引くとコマが進み、バネで戻る */
+.lever-mount { position: relative; width: 104px; height: clamp(84px, 12.6vh, 112px); }
+.slot-lever {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: calc(clamp(84px, 12.6vh, 112px) * 0.66);
+  height: clamp(84px, 12.6vh, 112px);
+  transform: translateX(-50%);
+  background: url('./assets/slot/lever-sheet.png') 0% 0% / 800% 100% no-repeat;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.7));
+  cursor: pointer;
+  transition: none;
+}
+.slot-lever:hover { filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.7)) brightness(1.12); }
+.slot-lever .lever-shaft, .slot-lever .lever-ball, .lever-base { display: none; }
+.slot-lever.pulled {
+  transform: translateX(-50%);
+  animation: lever-pull 0.55s steps(7, end) both;
+}
+@keyframes lever-pull {
+  0% { background-position-x: 0%; }
+  34% { background-position-x: 100%; }
+  100% { background-position-x: 0%; }
+}
+.lever-label {
+  position: absolute;
+  bottom: -2px;
+  left: 0; right: 0;
+  text-align: center;
+  font: 800 8px/1 var(--dopa-font-mono, monospace);
+  letter-spacing: 2px;
+  color: #ffe9a0;
+  text-shadow: 0 0 6px #ffde59;
+  pointer-events: none;
+}
+
+/* BET プレート / 投入口プレート（装飾・操作不可） */
+.bet-plate, .coin-plate { display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.bet-lamps { display: flex; gap: 5px; }
+.bet-btn, .settle-btn {
+  font: 800 10px/1 var(--dopa-font-mono, monospace);
+  letter-spacing: 1px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: #ffeab0;
+  background: linear-gradient(180deg, #7a6420, #3a2c0a 55%, #2a1f06);
+  border: 2px solid #d8c070;
+  box-shadow: 0 3px 0 #120d02, inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  text-shadow: 0 0 6px #ffde59;
+}
+.settle-btn { color: #c9fff6; background: linear-gradient(180deg, #1c6a62, #0c3030 55%, #082220); border-color: #7fe0d2; text-shadow: 0 0 6px #00f5d4; }
+.coin-slot { width: 74px; height: 22px; padding: 4px; border-radius: 6px; background: linear-gradient(180deg, #ececf4, #6a6a76 55%, #34343e); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255, 255, 255, 0.8); }
+.coin-slot span { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #020104, #1a0f29 50%, #020104); box-shadow: inset 0 0 6px #00f5d4; }
+
+/* 受け皿: クロームの縁の深い皿 */
+.medal-tray {
+  height: 8px;
+  margin: 0 30px;
+  border-radius: 0 0 24px 24px;
+  background: url('./assets/slot/brushed.png') 0 0 / 512px 128px, linear-gradient(180deg, #05030a, #1c1228);
+  background-blend-mode: overlay, normal;
+  border: 2px solid #b5afc4;
+  border-top: none;
+  box-shadow: inset 0 6px 10px #000, 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+.medal-tray span { display: block; margin: 2px auto 0; width: 56%; height: 3px; border-radius: 2px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent); }
+
+/* ---------------- レスポンシブ: 小さいウィンドウでは装飾を畳みターミナルを優先 ---------------- */
+@media (max-width: 760px) {
+  .bet-plate, .coin-plate { display: none; }
+  .cab-panel { grid-template-columns: 96px 1fr; }
+  .reel-flank .info-seg { max-width: 100px; }
+  .payline-l { left: -22px; }
+  .payline-r { right: -22px; }
+}
+@media (max-width: 560px) {
+  .reel-flank { display: none; }
+  .cab-reels { grid-template-columns: 1fr; }
+}
+@media (max-height: 700px) {
+  .slot-cabinet { --frame: 15px; gap: 5px; }
+  .nl-cap, .medal-tray { display: none; }
+  .cab-panel { padding: 8px 14px 6px; }
+  .lever-label { display: none; }
+}
+@media (max-height: 600px) {
+  .slot-cabinet { --frame: 12px; }
+  .marquee-lamps, .notice-lamp, .ind-row, .bet-lamps { display: none; }
+  .dome-lamp { width: 38px; }
+  .cab-reels { padding: 5px 10px; --cell: 24px; }
+  .cab-panel { grid-template-columns: 70px 1fr; padding: 6px 12px; }
+  .lever-mount { width: 70px; height: 70px; }
+  .slot-lever { width: 42px; height: 70px; }
+  .stop-btn { width: 46px; }
+  .marquee-logo { height: 22px; }
+}
+
+/* ---------------- reduced-flash ---------------- */
+body.reduced-flash .stop-btn:not(:disabled) .btn-cap,
+body.reduced-flash .stop-btn:not(:disabled)::before,
+body.reduced-flash .dl-glow,
+body.reduced-flash .dome-lamp::before,
+body.reduced-flash .notice-lamp,
+body.reduced-flash .reel-win.hit .reel-glass { animation: none !important; }
+body.reduced-flash .reel-win.spinning .reel-strip { animation-duration: 0.9s; filter: none; }

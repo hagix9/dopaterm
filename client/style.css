@@ -1,0 +1,2224 @@
+/**
+ * Dopaterm スタイルシート (Style & Animation System)
+ */
+
+:root {
+  --dopa-bg-deep: #0D0B14;
+  --dopa-bg-surface: #171524;
+  --dopa-bg-card: rgba(23, 21, 36, 0.88);
+
+  --dopa-text-main: #EDEAF6;
+  --dopa-text-muted: #8E8AAB;
+
+  --dopa-neon-pink: #FF1B8D;
+  --dopa-neon-cyan: #00F5D4;
+  --dopa-neon-yellow: #FFE600;
+  --dopa-neon-purple: #7928CA;
+  --dopa-neon-orange: #FF6B00;
+  --dopa-neon-red: #FF4757;
+
+  --dopa-font-mono: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, monospace;
+  --dopa-font-display: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--dopa-bg-deep);
+  color: var(--dopa-text-main);
+  font-family: var(--dopa-font-mono);
+  user-select: none;
+}
+
+/* Root App Shell */
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  --topbar-h: 42px;
+}
+
+/* Layer 0: Fixed top bar (score HUD outside terminal) */
+#top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-h);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(13, 11, 20, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+#top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Layer 1: Background (WebGL / Canvas) */
+#bg-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+#bg-css-fallback {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: radial-gradient(circle at 50% 50%, #1f1435 0%, #0d0b14 100%);
+  pointer-events: none;
+}
+
+/* Layer 2: Terminal Container (Interactive) — top-bar の高さ分だけ下げる */
+#terminal-container {
+  position: absolute;
+  top: var(--topbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px 24px;
+  z-index: 10;
+  user-select: text; /* Allow normal terminal text selection! */
+}
+
+/* Make xterm.js transparent so background glows through */
+.xterm, .xterm-viewport, .xterm-screen {
+  background: transparent !important;
+}
+
+/* Layer 3: Effect Overlay (Strictly pointer-events: none) */
+#effect-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#fx-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Mascot Container (Top Right Corner, トップバー直下) */
+#mascot-container {
+  position: absolute;
+  top: calc(var(--topbar-h) + 8px);
+  right: 36px;
+  z-index: 60;
+  pointer-events: none;
+}
+
+/* UI Card Center Anchor */
+#ui-card-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+/* Card Components */
+.dopa-card {
+  background: var(--dopa-bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid var(--dopa-neon-cyan);
+  border-radius: 20px;
+  padding: 24px 36px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(0, 245, 212, 0.4);
+  color: #FFF;
+  font-family: var(--dopa-font-display);
+}
+
+.dopa-candidate-badge {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  border-color: var(--dopa-neon-yellow);
+  box-shadow: 0 8px 24px rgba(255, 230, 0, 0.3);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.dopa-challenge-banner {
+  border-color: var(--dopa-neon-pink);
+  box-shadow: 0 0 30px rgba(255, 27, 141, 0.5);
+}
+
+.dopa-challenge-banner .dopa-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--dopa-neon-pink);
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.dopa-transfer-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-size: 20px;
+  font-family: var(--dopa-font-mono);
+  font-weight: bold;
+}
+
+.dopa-arrow {
+  color: var(--dopa-neon-cyan);
+  animation: pulse-arrow 0.6s infinite alternate;
+}
+
+@keyframes pulse-arrow {
+  from { opacity: 0.6; transform: scaleX(0.95); }
+  to { opacity: 1.0; transform: scaleX(1.05); }
+}
+
+.dopa-sub {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--dopa-text-muted);
+}
+
+/* Success Card */
+.dopa-success-card {
+  border-width: 3px;
+  min-width: 380px;
+}
+
+.dopa-crown {
+  font-size: 40px;
+  margin-bottom: 8px;
+  animation: float-crown 1s infinite alternate ease-in-out;
+}
+
+@keyframes float-crown {
+  from { transform: translateY(0); }
+  to { transform: translateY(-8px); }
+}
+
+.dopa-perfect-title {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, #FFE600, #FF1B8D, #00F5D4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+.dopa-xp-badge {
+  display: inline-block;
+  background: var(--dopa-neon-purple);
+  color: #FFE600;
+  font-weight: 900;
+  font-size: 18px;
+  padding: 6px 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--dopa-neon-yellow);
+}
+
+.dopa-combo-counter {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--dopa-neon-cyan);
+}
+
+/* Typo Block */
+.dopa-typo-block {
+  background: #FF4757;
+  color: #FFF;
+  padding: 30px 50px;
+  border-radius: 16px;
+  border: 4px solid #FFF;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(255, 71, 87, 0.8);
+}
+
+.typo-huge {
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: 4px;
+}
+
+.typo-sub {
+  font-size: 18px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.failure-combo {
+  margin-top: 12px;
+  font-size: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+/* Padlock & Ghost */
+.dopa-padlock-card, .dopa-ghost-card, .dopa-volcano-card, .dopa-generic-err-card {
+  background: var(--dopa-bg-card);
+  border: 3px solid var(--dopa-neon-red);
+  padding: 24px 40px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.padlock-icon, .ghost-row, .volcano-icon {
+  font-size: 54px;
+  margin-bottom: 8px;
+}
+
+/* Singularity Screen */
+.dopa-singularity-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(13, 11, 20, 0.85);
+  pointer-events: none;
+}
+
+.singularity-why {
+  font-size: 42px;
+  font-weight: 900;
+  color: #FFF;
+  text-shadow: 0 0 20px #FF007F, 0 0 40px #00F0FF;
+  margin-bottom: 16px;
+  letter-spacing: 4px;
+}
+
+.rotating-neon {
+  animation: rotate-neon 4s infinite linear alternate;
+}
+
+@keyframes rotate-neon {
+  from { transform: perspective(400px) rotateY(-10deg); }
+  to { transform: perspective(400px) rotateY(10deg); }
+}
+
+.singularity-counter {
+  font-size: 24px;
+  color: var(--dopa-neon-yellow);
+  font-weight: bold;
+  margin-bottom: 30px;
+}
+
+.singularity-credits-roll {
+  height: 180px;
+  overflow: hidden;
+  text-align: center;
+  font-family: var(--dopa-font-mono);
+  font-size: 14px;
+  line-height: 2;
+  color: var(--dopa-neon-cyan);
+}
+
+.credits-content {
+  animation: scroll-credits 6s linear forwards;
+}
+
+@keyframes scroll-credits {
+  from { transform: translateY(120px); }
+  to { transform: translateY(-160px); }
+}
+
+/* Disaster Overlay */
+.dopa-disaster-overlay {
+  font-size: 32px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.disaster-explosion {
+  color: #FF4757;
+  text-shadow: 0 0 30px #FF6B00;
+}
+
+.disaster-gameover {
+  font-size: 56px;
+  color: #FF0000;
+  font-family: 'Press Start 2P', monospace, sans-serif;
+  letter-spacing: 6px;
+}
+
+.blink {
+  animation: blink 0.4s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* Animations */
+.pop-scale-up {
+  animation: pop-scale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes pop-scale {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.slam-down {
+  animation: slam-down-anim 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes slam-down-anim {
+  from { transform: translateY(-200px) scale(1.4); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.screen-shake {
+  animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-3px, 0, 0); }
+  20%, 80% { transform: translate3d(5px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+  40%, 60% { transform: translate3d(6px, 0, 0); }
+}
+
+.fade-out {
+  opacity: 0 !important;
+  transform: scale(0.95) !important;
+  transition: opacity 0.25s ease, transform 0.25s ease !important;
+}
+
+/* Demo Rig Drawer */
+.demo-rig-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 340px;
+  background: rgba(18, 16, 28, 0.95);
+  backdrop-filter: blur(16px);
+  border-left: 2px solid var(--dopa-neon-cyan);
+  z-index: 100;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto; /* Allow interaction with demo panel! */
+}
+
+.demo-rig-panel.closed {
+  transform: translateX(340px);
+}
+
+.demo-toggle-btn {
+  position: absolute;
+  /* トップバーのSLOTボタン・右上マスコットと重ならないよう右縁の中央へ */
+  top: 50%;
+  transform: translateY(-50%);
+  left: -140px;
+  width: 140px;
+  padding: 8px 12px;
+  background: var(--dopa-bg-surface);
+  color: var(--dopa-neon-cyan);
+  border: 2px solid var(--dopa-neon-cyan);
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  font-family: var(--dopa-font-mono);
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: -4px 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.demo-toggle-btn:hover {
+  background: var(--dopa-neon-cyan);
+  color: #000;
+}
+
+.demo-rig-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.demo-header h3 {
+  font-size: 16px;
+  color: var(--dopa-neon-pink);
+  margin-bottom: 4px;
+}
+
+.demo-header .demo-sub {
+  font-size: 11px;
+  color: var(--dopa-text-muted);
+}
+
+.demo-section {
+  margin-top: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.demo-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: var(--dopa-text-muted);
+}
+
+.demo-slider {
+  width: 100%;
+  accent-color: var(--dopa-neon-cyan);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.demo-button-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.demo-button-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.demo-btn-sm {
+  background: var(--dopa-bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #FFF;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.demo-btn-sm:hover {
+  border-color: var(--dopa-neon-cyan);
+  background: rgba(0, 245, 212, 0.1);
+}
+
+.demo-action-btn {
+  background: var(--dopa-bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFF;
+  padding: 8px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.demo-action-btn:hover {
+  transform: translateY(-1px);
+}
+
+.success-btn {
+  grid-column: span 2;
+  background: linear-gradient(135deg, #00F5D4, #00C896);
+  color: #000;
+  border: none;
+}
+
+.singularity-btn {
+  grid-column: span 2;
+  background: linear-gradient(135deg, #FF1B8D, #7928CA);
+  color: #FFF;
+  border: none;
+}
+
+.fail-btn {
+  border-color: rgba(255, 71, 87, 0.4);
+}
+
+.fail-btn:hover {
+  background: rgba(255, 71, 87, 0.2);
+}
+
+.disaster-btn {
+  border-color: rgba(255, 107, 0, 0.4);
+}
+
+.disaster-btn:hover {
+  background: rgba(255, 107, 0, 0.2);
+}
+
+/* Score HUD Bar (トップバー内・ターミナル表示領域の外側) */
+#score-hud-container {
+  position: relative;
+  pointer-events: none;
+  min-width: 0;
+}
+
+.score-hud-bar {
+  position: relative; /* flying badge のアンカー */
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(18, 16, 28, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 6px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  font-family: var(--dopa-font-mono);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.score-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dopa-text-muted);
+}
+
+.score-number {
+  font-size: 16px;
+  font-weight: 900;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.success-glow {
+  color: var(--dopa-neon-cyan);
+  text-shadow: 0 0 10px rgba(0, 245, 212, 0.6);
+}
+
+.failure-glow {
+  color: var(--dopa-neon-red);
+  text-shadow: 0 0 10px rgba(255, 71, 87, 0.6);
+}
+
+.score-sub {
+  font-size: 10px;
+  color: var(--dopa-text-muted);
+}
+
+.score-divider {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.score-bump {
+  animation: bump-scale 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes bump-scale {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+.score-flying-badge {
+  position: absolute;
+  top: 100%;
+  left: 20px;
+  font-weight: 900;
+  font-size: 15px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  pointer-events: none;
+  animation: float-away 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.badge-success {
+  background: var(--dopa-neon-cyan);
+  color: #000;
+  box-shadow: 0 0 15px var(--dopa-neon-cyan);
+}
+
+.badge-failure {
+  background: var(--dopa-neon-red);
+  color: #FFF;
+  box-shadow: 0 0 15px var(--dopa-neon-red);
+}
+
+@keyframes float-away {
+  0% { transform: translateY(0) scale(0.7); opacity: 0; }
+  20% { transform: translateY(10px) scale(1.2); opacity: 1; }
+  100% { transform: translateY(40px) scale(0.9); opacity: 0; }
+}
+
+/* 狭い画面ではコンパクトHUD */
+@media (max-width: 720px) {
+  .score-hud-bar {
+    gap: 8px;
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+  .score-label,
+  .score-sub {
+    display: none;
+  }
+  .score-number {
+    font-size: 13px;
+  }
+  .score-divider {
+    display: none;
+  }
+}
+
+/* Dynamic Terminal Border Glow based on Combo Rank */
+#terminal-container {
+  border: 2px solid transparent;
+  border-radius: 12px;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+#terminal-container.glow-normal {
+  border-color: rgba(0, 245, 212, 0.2);
+  box-shadow: 0 0 15px rgba(0, 245, 212, 0.1);
+}
+
+#terminal-container.glow-combo {
+  border-color: rgba(255, 230, 0, 0.5);
+  box-shadow: 0 0 25px rgba(255, 230, 0, 0.3), inset 0 0 15px rgba(255, 230, 0, 0.1);
+}
+
+#terminal-container.glow-fever {
+  border-color: var(--dopa-neon-pink);
+  box-shadow: 0 0 35px rgba(255, 27, 141, 0.5), inset 0 0 20px rgba(0, 245, 212, 0.2);
+  animation: fever-border-pulse 1.2s infinite alternate;
+}
+
+@keyframes fever-border-pulse {
+  0% { border-color: #FF1B8D; box-shadow: 0 0 30px #FF1B8D; }
+  100% { border-color: #00F5D4; box-shadow: 0 0 40px #00F5D4; }
+}
+
+#terminal-container.glow-hyper {
+  border-color: #7928CA;
+  box-shadow: 0 0 50px rgba(121, 40, 202, 0.7), inset 0 0 30px rgba(0, 240, 255, 0.3);
+  animation: hyper-rainbow-pulse 2s infinite linear;
+}
+
+@keyframes hyper-rainbow-pulse {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+#terminal-container.glow-singularity {
+  border-color: #FFF;
+  box-shadow: 0 0 80px rgba(255, 255, 255, 0.9), inset 0 0 50px rgba(255, 0, 127, 0.5);
+  animation: singularity-border-pulse 0.5s infinite alternate;
+}
+
+@keyframes singularity-border-pulse {
+  0% { transform: scale(0.998); box-shadow: 0 0 60px #FF007F; }
+  100% { transform: scale(1.002); box-shadow: 0 0 100px #00F0FF; }
+}
+
+/* Demo Panel Elements */
+.demo-select {
+  width: 100%;
+  background: var(--dopa-bg-deep);
+  color: var(--dopa-neon-cyan);
+  border: 1px solid var(--dopa-neon-cyan);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-family: var(--dopa-font-mono);
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.demo-hint-text {
+  font-size: 10px;
+  color: var(--dopa-text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.demo-level-desc {
+  font-size: 10px;
+  color: var(--dopa-neon-yellow);
+  font-weight: bold;
+}
+
+.demo-btn-reset {
+  width: 100%;
+  background: rgba(255, 71, 87, 0.15);
+  border: 1px solid var(--dopa-neon-red);
+  color: var(--dopa-neon-red);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.demo-btn-reset:hover {
+  background: var(--dopa-neon-red);
+  color: #FFF;
+}
+
+/* ============================================================
+ * カスタムカラー UI
+ * ============================================================ */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.color-grid label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--dopa-text-muted);
+}
+
+.color-grid input[type='color'],
+.ansi-grid input[type='color'] {
+  width: 100%;
+  height: 24px;
+  border: 1px solid rgba(0, 245, 212, 0.3);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ansi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.ansi-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  color: var(--dopa-text-muted);
+}
+
+.demo-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--dopa-text);
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+/* ============================================================
+ * トップバー SLOT ボタン
+ * ============================================================ */
+.topbar-slot-btn {
+  margin-left: 8px;
+  background: linear-gradient(180deg, #FF1B8D, #7928CA);
+  border: 1px solid #FFDE59;
+  color: #FFF;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 4px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(255, 27, 141, 0.5);
+  transition: transform 0.1s, box-shadow 0.2s;
+  pointer-events: auto;
+}
+
+.topbar-slot-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 20px rgba(255, 222, 89, 0.7);
+}
+
+/* ============================================================
+ * DOPA SLOT MODE Rev.2 - 実機筐体型パチスロデザイン
+ * 縦長前扉構造: 上部マーキー+電飾 → リール窓(=ターミナル) →
+ * 情報パネル(7seg風) → 下部操作パネル(停止×3+右レバー) → スピーカー
+ * ============================================================ */
+#slot-container {
+  display: none;
+  position: absolute;
+  top: var(--topbar-h);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+}
+
+.slot-mode #slot-container {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+/* --- 筐体本体: 縦長・樹脂ボディ＋メッキフレーム --- */
+.slot-cabinet {
+  position: relative;
+  flex: 1;
+  max-width: 960px;
+  margin: 6px auto;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto auto;
+  gap: 6px;
+  padding: 10px 14px 8px;
+  border-radius: 16px 16px 22px 22px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 4px),
+    linear-gradient(165deg, #241a30 0%, #120c1c 55%, #0a0712 100%);
+  border: 2px solid #3a2a4d;
+  box-shadow:
+    /* メッキフレーム感（外周の二重リム） */
+    0 0 0 3px #565058,
+    0 0 0 5px #211d24,
+    0 0 30px rgba(255, 27, 141, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+/* --- 上部マーキー（電飾パネル） --- */
+.cab-marquee {
+  position: relative;
+  z-index: 1;
+}
+
+.marquee-frame {
+  border-radius: 10px;
+  padding: 4px 8px 6px;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(121, 40, 202, 0.5), transparent 70%),
+    linear-gradient(180deg, #2b1638 0%, #150a20 100%);
+  border: 2px solid #6d5a80;
+  box-shadow:
+    inset 0 0 24px rgba(0, 0, 0, 0.8),
+    0 2px 0 rgba(255, 255, 255, 0.08);
+}
+
+.marquee-lamps {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.m-lamp {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5a2a20, #2a1210);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.7);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.m-lamp.lamp-on,
+.s-lamp.lamp-on {
+  background: radial-gradient(circle at 35% 30%, #fff6c9 0%, #FFDE59 40%, #d98b00 100%);
+  box-shadow: 0 0 10px #FFDE59, 0 0 4px #fff;
+}
+
+.marquee-inner {
+  text-align: center;
+  padding: 2px 0;
+}
+
+.marquee-logo {
+  font-size: clamp(18px, 3vw, 30px);
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #FFDE59;
+  text-shadow:
+    0 0 8px #FFDE59,
+    0 0 20px #FF1B8D,
+    0 2px 0 #6b0033;
+  font-family: 'Arial Black', 'Monaco', sans-serif;
+}
+
+.marquee-sub {
+  font-size: 8px;
+  letter-spacing: 5px;
+  color: #b8a8d0;
+}
+
+/* --- 中央: サイドランプ + リール窓 --- */
+.cab-window-row {
+  display: grid;
+  grid-template-columns: 22px 1fr 22px;
+  gap: 8px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.side-lamps {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #1c1426, #0d0815);
+  border: 1px solid #3a2a4d;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+}
+
+.s-lamp {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a1a3a, #200a18);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.7);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+/* リール窓: メッキベゼルの奥にターミナル */
+.reel-window-frame {
+  position: relative;
+  border-radius: 12px;
+  padding: 6px;
+  /* メッキ枠 */
+  background: linear-gradient(160deg, #cfcfd6 0%, #7a7a86 18%, #eaeaef 40%, #63636e 62%, #b8b8c2 82%, #55555e 100%);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.7),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  min-height: 0;
+  display: flex;
+}
+
+.reel-window-bezel {
+  position: relative;
+  flex: 1;
+  border-radius: 8px;
+  background: #05030a;
+  box-shadow:
+    inset 0 3px 14px rgba(0, 0, 0, 0.95),
+    inset 0 0 40px rgba(10, 5, 20, 0.9);
+  overflow: hidden;
+  display: flex;
+  min-height: 0;
+}
+
+/* 有効ライン（横3本・リール窓の装飾。ターミナル操作は妨げない） */
+.win-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 77, 109, 0.28), transparent);
+  pointer-events: none;
+  z-index: 12;
+}
+.win-line-1 { top: 25%; }
+.win-line-2 { top: 50%; }
+.win-line-3 { top: 75%; }
+
+.slot-screen {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  z-index: 10;
+}
+
+.slot-mode #terminal-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+/* --- 情報パネル: 7セグ風 + リザルト図柄 --- */
+.cab-info {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #191022, #0c0714);
+  border: 1px solid #3a2a4d;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+}
+
+.info-seg {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 4px;
+  border-radius: 5px;
+  background: #050308;
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.info-label {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #8a7a9d;
+}
+
+.seg-digits {
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #FFDE59;
+  text-shadow: 0 0 8px rgba(255, 222, 89, 0.7);
+}
+
+.info-xp .seg-digits { color: #00F5D4; text-shadow: 0 0 8px rgba(0,245,212,0.7); }
+.info-fp .seg-digits { color: #FF4D6D; text-shadow: 0 0 8px rgba(255,77,109,0.7); }
+.info-combo .seg-digits { color: #FFDE59; }
+.info-level .seg-digits { color: #C77DFF; text-shadow: 0 0 8px rgba(199,125,255,0.7); }
+
+.info-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: #050308;
+  border: 1px solid rgba(255,222,89,0.25);
+}
+
+.result-cells {
+  display: flex;
+  gap: 4px;
+}
+
+.reel-cell {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 900;
+  font-family: 'Monaco', monospace;
+  color: #FFDE59;
+  text-shadow: 0 0 8px #FFDE59;
+  border-radius: 4px;
+  background: radial-gradient(circle at 50% 40%, #221233, #0b0614);
+  border: 1px solid rgba(255, 222, 89, 0.3);
+}
+
+.reel-cell.spinning {
+  filter: blur(1.5px);
+  border-color: #00F0FF;
+  animation: cell-flick 0.08s infinite;
+}
+
+@keyframes cell-flick {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.reel-cell.landed {
+  animation: cell-land 0.3s cubic-bezier(0.2, 2.2, 0.4, 1);
+  border-color: #FFDE59;
+  box-shadow: 0 0 12px rgba(255, 222, 89, 0.5);
+}
+
+@keyframes cell-land {
+  0% { transform: scale(1.5); filter: brightness(2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* --- 下部操作パネル: 停止ボタン列 + レバー --- */
+.cab-panel {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 8px 10px 4px;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, #2e2438 0%, #191124 70%, #0e0918 100%);
+  border-top: 2px solid #6d5a80;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.08);
+}
+
+/* 停止ボタン: 金属ベゼル+発光樹脂トップ、押すと沈み込む */
+.stop-cluster {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.stop-btn {
+  position: relative;
+  width: 74px;
+  height: 52px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  /* メッキベゼル */
+  background: linear-gradient(160deg, #cfcfd6 0%, #7a7a86 30%, #eaeaef 50%, #63636e 75%, #3f3f48 100%);
+  box-shadow:
+    0 5px 0 #1a141f,
+    0 6px 10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 1px rgba(255,255,255,0.5);
+  transition: transform 0.06s, box-shadow 0.06s, filter 0.2s;
+  padding: 0;
+}
+
+.stop-btn .btn-cap {
+  position: absolute;
+  inset: 4px;
+  border-radius: 8px;
+  background:
+    radial-gradient(ellipse at 50% 25%, #ff5c8a 0%, #d11e56 55%, #7a0f30 100%);
+  box-shadow:
+    inset 0 -6px 10px rgba(0,0,0,0.45),
+    inset 0 3px 4px rgba(255,255,255,0.35);
+  display: block;
+  transition: box-shadow 0.1s, background 0.15s;
+}
+
+.stop-btn .btn-text {
+  position: relative;
+  z-index: 1;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  line-height: 52px;
+}
+
+/* 操作可能時: LED発光 */
+.stop-btn:not(:disabled) .btn-cap {
+  background:
+    radial-gradient(ellipse at 50% 25%, #ff8fb0 0%, #ff2d78 55%, #a01445 100%);
+  box-shadow:
+    inset 0 -6px 10px rgba(0,0,0,0.4),
+    inset 0 3px 4px rgba(255,255,255,0.4),
+    0 0 16px rgba(255, 45, 120, 0.75);
+}
+
+.stop-btn:disabled {
+  cursor: default;
+  filter: brightness(0.55) saturate(0.6);
+}
+
+/* 押し込み（沈み込み＋発光強化） */
+.stop-btn:active:not(:disabled),
+.stop-btn.btn-pressed {
+  transform: translateY(4px);
+  box-shadow:
+    0 1px 0 #1a141f,
+    0 2px 4px rgba(0, 0, 0, 0.7),
+    inset 0 1px 1px rgba(255,255,255,0.5);
+}
+
+.stop-btn:active:not(:disabled) .btn-cap,
+.stop-btn.btn-pressed .btn-cap {
+  background:
+    radial-gradient(ellipse at 50% 30%, #fff0f5 0%, #ff2d78 60%, #8f0f3a 100%);
+  box-shadow:
+    inset 0 -3px 8px rgba(0,0,0,0.5),
+    inset 0 2px 3px rgba(255,255,255,0.5),
+    0 0 24px rgba(255, 222, 89, 0.9);
+}
+
+/* --- スタートレバー: 台座+金属シャフト+球グリップ（倒れ→復帰） --- */
+.lever-mount {
+  position: relative;
+  width: 92px;
+  height: 118px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.lever-base {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #d8d8e0 0%, #83838e 45%, #4a4a55 100%);
+  box-shadow:
+    0 3px 6px rgba(0,0,0,0.8),
+    inset 0 1px 1px rgba(255,255,255,0.6);
+  z-index: 1;
+}
+
+.slot-lever {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  width: 46px;
+  height: 92px;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* 金属シャフト */
+.lever-shaft {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 11px;
+  height: 62px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #4c4c55 0%, #c9c9d2 30%, #f4f4f8 50%, #8a8a95 75%, #3c3c46 100%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.7);
+}
+
+/* 球グリップ（メタリックな球体） */
+.lever-ball {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%,
+    #ffd7e6 0%, #ff5c8a 22%, #d11e56 55%, #6e0c2e 90%, #3c061a 100%);
+  box-shadow:
+    inset -5px -7px 12px rgba(0,0,0,0.55),
+    inset 4px 5px 8px rgba(255,255,255,0.4),
+    0 4px 10px rgba(0,0,0,0.7),
+    0 0 16px rgba(255, 27, 141, 0.45);
+  transition: box-shadow 0.15s;
+}
+
+/* レバーを倒す（前方向へ傾倒→バネ復帰） */
+.slot-lever.pulled {
+  transform: translateX(-50%) rotateX(0deg) rotate(38deg);
+  transition: transform 0.22s cubic-bezier(0.5, -0.28, 0.74, 0.05);
+}
+
+.slot-lever.pulled .lever-ball {
+  box-shadow:
+    inset -5px -7px 12px rgba(0,0,0,0.55),
+    inset 4px 5px 8px rgba(255,255,255,0.4),
+    0 4px 10px rgba(0,0,0,0.7),
+    0 0 30px rgba(255, 222, 89, 0.9);
+}
+
+.slot-lever:hover .lever-ball {
+  box-shadow:
+    inset -5px -7px 12px rgba(0,0,0,0.55),
+    inset 4px 5px 8px rgba(255,255,255,0.4),
+    0 4px 10px rgba(0,0,0,0.7),
+    0 0 24px rgba(255, 27, 141, 0.8);
+}
+
+.lever-label {
+  position: absolute;
+  bottom: 0;
+  font-size: 8px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #FFDE59;
+  text-shadow: 0 0 6px #FFDE59;
+}
+
+/* --- 底部スピーカー・フッター --- */
+.cab-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 8px 0;
+}
+
+.speaker-grill {
+  flex: 1;
+  height: 16px;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, #1a1224 0 4px, #0a0612 4px 8px);
+  border: 1px solid #2e2138;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.cab-footer-text {
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #6a5a80;
+  white-space: nowrap;
+}
+
+/* --- 筐体リアクション --- */
+.slot-cabinet.cab-flash {
+  animation: cab-flash-anim 0.45s ease-out;
+}
+
+@keyframes cab-flash-anim {
+  0% { filter: brightness(2.2) saturate(1.5); }
+  100% { filter: brightness(1) saturate(1); }
+}
+
+.slot-cabinet.cab-shock {
+  animation: cab-shock-anim 0.28s ease-out;
+}
+
+@keyframes cab-shock-anim {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+.slot-cabinet.cab-win .reel-window-frame {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.6), 0 0 34px rgba(0, 245, 212, 0.8);
+}
+
+.slot-cabinet.cab-lose .reel-window-frame {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.6), 0 0 34px rgba(255, 77, 109, 0.8);
+}
+
+.slot-cabinet.cab-jackpot {
+  animation: cab-jackpot-pulse 0.4s infinite alternate;
+}
+
+@keyframes cab-jackpot-pulse {
+  0% { box-shadow: 0 0 0 3px #565058, 0 0 0 5px #211d24, 0 0 50px #FFDE59; }
+  100% { box-shadow: 0 0 0 3px #565058, 0 0 0 5px #211d24, 0 0 80px #FF1B8D; }
+}
+
+/* コンボランク連動: マーキーと枠の変色 */
+.slot-cabinet.cab-fever .marquee-logo { color: #FF5C8A; text-shadow: 0 0 8px #FF5C8A, 0 0 24px #FF1B8D; }
+.slot-cabinet.cab-hyper .marquee-logo { color: #C77DFF; text-shadow: 0 0 8px #C77DFF, 0 0 24px #7928CA; }
+.slot-cabinet.cab-singularity {
+  box-shadow:
+    0 0 0 3px #8f8f98,
+    0 0 0 5px #211d24,
+    0 0 80px rgba(255, 255, 255, 0.7),
+    inset 0 -14px 30px rgba(255, 0, 127, 0.25);
+}
+.slot-cabinet.cab-singularity .marquee-logo { color: #FFF; text-shadow: 0 0 10px #FFF, 0 0 30px #FF007F; }
+
+/* --- SLOT ボーナスカード --- */
+.dopa-slot-bonus {
+  text-align: center;
+  border: 2px solid #FFDE59;
+  box-shadow: 0 0 40px rgba(255, 222, 89, 0.6);
+}
+
+.slot-bonus-symbols {
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: #FFDE59;
+  text-shadow: 0 0 16px #FFDE59, 0 0 40px #FF1B8D;
+}
+
+.slot-bonus-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #FF1B8D;
+  margin-top: 6px;
+}
+/* ============================================================
+ * 光過敏配慮（reduced-flash）：激しい点滅・シェイクを抑制
+ * ============================================================ */
+body.reduced-flash .shake-hard,
+body.reduced-flash .shake-soft,
+body.reduced-flash .mega-shake,
+body.reduced-flash.screen-shake {
+  animation: none !important;
+}
+
+body.reduced-flash .big-text-flash,
+body.reduced-flash .terminal-bg-flash-success,
+body.reduced-flash .terminal-bg-flash-fail,
+body.reduced-flash .reel-symbol.spinning,
+body.reduced-flash .slot-cabinet.cab-jackpot,
+body.reduced-flash .cab-glow-frame,
+body.reduced-flash #terminal-container.glow-fever,
+body.reduced-flash #terminal-container.glow-hyper,
+body.reduced-flash #terminal-container.glow-singularity {
+  animation: none !important;
+}
+
+body.reduced-flash .slot-cabinet.cab-flash {
+  animation: none !important;
+  filter: brightness(1.25);
+}
+
+body.reduced-flash .slot-cabinet.cab-shock {
+  animation: none !important;
+}
+
+body.reduced-flash .reel-symbol.spinning {
+  filter: blur(2px);
+  opacity: 0.7;
+}
+
+
+/* ============================================================
+ * SLOT MODE レスポンシブ
+ * ============================================================ */
+@media (max-width: 720px) {
+  .slot-cabinet { padding: 6px 8px; gap: 4px; }
+  .cab-window-row { grid-template-columns: 14px 1fr 14px; gap: 4px; }
+  .marquee-logo { letter-spacing: 2px; }
+  .stop-btn { width: 58px; height: 44px; }
+  .stop-btn .btn-text { line-height: 44px; font-size: 13px; }
+  .lever-mount { width: 64px; height: 90px; }
+  .lever-shaft { height: 46px; width: 9px; }
+  .lever-ball { width: 30px; height: 30px; }
+  .seg-digits { font-size: 12px; }
+  .reel-cell { width: 24px; height: 24px; font-size: 14px; }
+  .cab-footer-text { display: none; }
+}
+
+/* ============================================================
+ * 余韻: 縁グロー（--dopa-heat で連続制御・非点滅）
+ * 演出の「残光」を画面縁に残す軽量表現
+ * ============================================================ */
+#edge-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  /* 熱量に応じた内側グロー（点滅しない定常発光なので光過敏に安全） */
+  box-shadow:
+    inset 0 0 calc(30px + var(--dopa-heat, 0) * 140px)
+    color-mix(in srgb, var(--dopa-heat-color, #00F5D4) calc(var(--dopa-heat, 0) * 55%), transparent);
+  opacity: var(--dopa-heat, 0);
+  transition: opacity 0.4s ease-out;
+}
+
+/* 高熱量時は上辺に薄いアーク光を追加 */
+#edge-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--dopa-heat-color, #00F5D4), transparent);
+  opacity: calc(max(0, var(--dopa-heat, 0) - 0.5) * 2);
+}
+
+/* ============================================================
+ * SLOT 筐体の熱量連動
+ * ============================================================ */
+.slot-cabinet.cab-heated .marquee-frame {
+  box-shadow:
+    inset 0 0 24px rgba(0, 0, 0, 0.8),
+    0 0 24px rgba(255, 222, 89, 0.35);
+  border-color: #FFDE59;
+}
+
+.slot-cabinet.cab-heated .marquee-logo {
+  text-shadow: 0 0 10px #FFDE59, 0 0 26px #FF1B8D, 0 2px 0 #6b0033;
+}
+
+.slot-cabinet.cab-blazing {
+  box-shadow:
+    0 0 0 3px #6f6878,
+    0 0 0 5px #211d24,
+    0 0 46px rgba(255, 222, 89, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.55);
+}
+
+.slot-cabinet.cab-blazing .marquee-logo {
+  color: #FFF;
+  text-shadow: 0 0 12px #FFDE59, 0 0 34px #FF1B8D, 0 0 50px #00F0FF;
+}
+
+/* ============================================================
+ * TYPO 演出バリアント（Rev.6）
+ * 落下 / 激突 / 粉砕 / ヒビ / 捕食 / 転倒 / 警告ランプ / 逆転JACKPOT
+ * ============================================================ */
+.typo-fx {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* --- 巨大TYPO落下 --- */
+.typo-fall-text {
+  font-size: calc(96px * var(--typo-scale, 1));
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: #FF4757;
+  text-shadow: 0 0 24px rgba(255, 71, 87, 0.9), 0 6px 0 #7d1020;
+  animation: typo-fall-anim 0.55s cubic-bezier(0.3, 0, 0.7, 1.4) forwards;
+}
+@keyframes typo-fall-anim {
+  0%   { transform: translateY(-130vh) scaleY(1.1); }
+  70%  { transform: translateY(3vh) scaleY(0.82); }
+  85%  { transform: translateY(-1.5vh) scaleY(1.06); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+
+/* --- 横から激突 --- */
+.typo-slam-text {
+  font-size: calc(88px * var(--typo-scale, 1));
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #FFE600;
+  text-shadow: 0 0 22px rgba(255, 230, 0, 0.85), 0 0 46px rgba(255, 71, 87, 0.5);
+  animation: typo-slam-anim 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+}
+@keyframes typo-slam-anim {
+  0%   { transform: translateX(calc(var(--slam-dir, 1) * 120vw)) rotate(calc(var(--slam-dir, 1) * -14deg)); }
+  75%  { transform: translateX(calc(var(--slam-dir, 1) * -2vw)) rotate(calc(var(--slam-dir, 1) * 3deg)); }
+  100% { transform: translateX(0) rotate(0); }
+}
+
+/* --- 粉砕 --- */
+.typo-shatter-core {
+  font-size: calc(80px * var(--typo-scale, 1));
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #FF1B8D;
+  text-shadow: 0 0 20px rgba(255, 27, 141, 0.9);
+  animation: typo-core-fade 0.32s ease-in forwards;
+}
+@keyframes typo-core-fade {
+  0% { opacity: 1; transform: scale(1); }
+  70% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+.typo-shard {
+  position: absolute;
+  font-size: 42px;
+  font-weight: 900;
+  color: #FF78C4;
+  text-shadow: 0 0 14px rgba(255, 27, 141, 0.8);
+  animation: typo-shard-fly 0.9s cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
+  opacity: 0;
+}
+@keyframes typo-shard-fly {
+  0%   { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0.4); }
+}
+
+/* --- 画面ヒビ --- */
+.typo-crack {
+  position: absolute;
+  inset: 0;
+}
+.typo-crack svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: typo-crack-in 0.18s ease-out forwards;
+}
+.typo-crack polyline {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.85);
+  stroke-width: 0.45;
+  filter: drop-shadow(0 0 3px rgba(0, 240, 255, 0.9));
+}
+@keyframes typo-crack-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.typo-crack-label {
+  position: absolute;
+  bottom: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 34px;
+  font-weight: 900;
+  color: #00F0FF;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.9);
+}
+.typo-crack .failure-combo {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* --- マスコットが食べる（右上へ吸い込まれる） --- */
+.typo-eaten-text {
+  font-size: calc(84px * var(--typo-scale, 1));
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: #00F5D4;
+  text-shadow: 0 0 24px rgba(0, 245, 212, 0.9);
+  animation: typo-eaten-anim 1.1s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+@keyframes typo-eaten-anim {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  35%  { transform: translate(-4vw, 0) scale(1.05) rotate(-3deg); opacity: 1; }
+  100% { transform: translate(38vw, -34vh) scale(0.06) rotate(25deg); opacity: 0; }
+}
+
+/* --- 転倒（テキストは控えめ、主役はマスコット） --- */
+.typo-trip-text {
+  font-size: 56px;
+  font-weight: 900;
+  color: #FFA502;
+  text-shadow: 0 0 18px rgba(255, 165, 2, 0.8);
+  animation: typo-trip-wobble 1s ease-in-out forwards;
+}
+@keyframes typo-trip-wobble {
+  0%   { transform: rotate(0) scale(0.8); opacity: 0; }
+  20%  { transform: rotate(-8deg) scale(1.1); opacity: 1; }
+  40%  { transform: rotate(6deg) scale(1); }
+  60%  { transform: rotate(-4deg) scale(1); }
+  100% { transform: rotate(0) scale(1); opacity: 1; }
+}
+
+/* --- 警告ランプ --- */
+.typo-lamp-card {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #FFF;
+  background: rgba(200, 20, 40, 0.85);
+  border: 3px solid #FF4757;
+  border-radius: 12px;
+  padding: 12px 28px;
+  box-shadow: 0 0 30px rgba(255, 71, 87, 0.8);
+  animation: pop-scale-up-anim 0.2s ease-out forwards;
+}
+
+/* --- 逆転JACKPOT --- */
+.typo-jackpot {
+  background: linear-gradient(180deg, rgba(60, 40, 0, 0.95), rgba(30, 10, 40, 0.95));
+  border: 4px solid #FFDE59;
+  border-radius: 20px;
+  padding: 28px 48px;
+  box-shadow: 0 0 50px rgba(255, 222, 89, 0.7);
+}
+.jackpot-symbols { font-size: 54px; }
+.jackpot-title {
+  font-size: 44px;
+  font-weight: 900;
+  color: #FFDE59;
+  text-shadow: 0 0 20px rgba(255, 222, 89, 0.9);
+}
+.jackpot-sub {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFF0F5;
+}
+
+/* ============================================================
+ * 予兆: 実行中の入力行グロー（body.exec-charge で点灯）
+ * ============================================================ */
+#charge-glow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 26%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  background: linear-gradient(to top, rgba(0, 245, 212, 0.16), transparent);
+  transition: opacity 0.35s ease-out;
+}
+body.exec-charge #charge-glow {
+  opacity: 1;
+  animation: charge-breathe 1.6s ease-in-out infinite;
+}
+@keyframes charge-breathe {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.45); }
+}
+body.reduced-flash.exec-charge #charge-glow {
+  animation: none; /* 呼吸なしの定常グロー */
+}
+
+/* ============================================================
+ * SLOT 筐体 警告ランプ（非点滅・定常赤灯）
+ * ============================================================ */
+.slot-cabinet.cab-warning .marquee-frame {
+  box-shadow:
+    inset 0 0 24px rgba(0, 0, 0, 0.8),
+    0 0 30px rgba(255, 71, 87, 0.75);
+  border-color: #FF4757;
+}
+.slot-cabinet.cab-warning .marquee-logo {
+  color: #FFF;
+  text-shadow: 0 0 12px #FF4757, 0 0 30px #FF1744;
+}
+.slot-cabinet.cab-warning .marquee-lamps .m-lamp,
+.slot-cabinet.cab-warning .side-lamps .s-lamp {
+  background: #FF4757;
+  box-shadow: 0 0 10px #FF4757;
+}
+
+/* ============================================================
+   SESSION TABS / LAUNCHER / SSH DIALOG
+   ============================================================ */
+/* #terminal-container は absolute ストレッチ（元設計）のまま。
+   .session-view は absolute 祖先である terminal-container に対して inset:0 で貼る */
+.session-view {
+  position: absolute;
+  inset: 0;
+}
+.session-view.hidden {
+  display: none;
+}
+
+#session-tabs {
+  position: absolute;
+  top: var(--topbar-h);
+  left: 0;
+  right: 0;
+  height: 34px;
+  z-index: 11;
+  display: flex;
+  gap: 4px;
+  padding: 4px 10px 0;
+  background: rgba(10, 8, 20, 0.9);
+  border-bottom: 1px solid rgba(0, 245, 212, 0.18);
+  overflow-x: auto;
+}
+/* タブバー表示中はターミナル領域を下げる（SLOT モード時は筐体内配置なので除外） */
+#app.has-tabs:not(.slot-mode) #terminal-container {
+  top: calc(var(--topbar-h) + 34px);
+}
+#session-tabs.hidden {
+  display: none;
+}
+.session-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #9d95c9;
+  background: rgba(30, 25, 55, 0.7);
+  border: 1px solid rgba(0, 245, 212, 0.15);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.session-tab.active {
+  color: #00f5d4;
+  background: rgba(0, 245, 212, 0.1);
+  border-color: rgba(0, 245, 212, 0.45);
+}
+.session-tab.kind-ssh.active {
+  border-color: rgba(255, 230, 0, 0.45);
+  color: #ffe600;
+}
+.session-tab.state-closed .tab-label {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.tab-status {
+  font-size: 10px;
+  color: #ff4757;
+}
+.tab-close {
+  background: none;
+  border: none;
+  color: #9d95c9;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+.tab-close:hover {
+  color: #ff4757;
+}
+.session-tab.tab-plus {
+  font-size: 14px;
+  padding: 4px 12px;
+}
+
+/* ---- Launcher ---- */
+#launcher {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  /* パネルは上揃え — 接続先件数でパネル高が変わっても
+     ヘッダー行（タイトル+EXIT）の位置が動かない */
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(6vh, 16px) 16px 16px;
+  box-sizing: border-box;
+  background: rgba(8, 6, 16, 0.82);
+  backdrop-filter: blur(6px);
+}
+#launcher.hidden {
+  display: none;
+}
+.launcher-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 92vw);
+  max-height: 100%;
+  overflow: hidden;
+  background: linear-gradient(160deg, #17122b, #0d0a18);
+  border: 2px solid rgba(0, 245, 212, 0.4);
+  border-radius: 16px;
+  padding: 28px 32px;
+  box-shadow: 0 0 40px rgba(0, 245, 212, 0.15), 0 0 80px rgba(255, 27, 141, 0.08);
+}
+.launcher-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 800;
+  text-align: center;
+  background: linear-gradient(90deg, #00f5d4, #ff1b8d, #ffe600);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.launcher-sub {
+  text-align: center;
+  color: #9d95c9;
+  font-size: 13px;
+  margin: 6px 0 20px;
+}
+/* スクロールは接続先一覧の範囲に限定（ヘッダー・ロゴ・補助行は動かない） */
+.launcher-options {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.launcher-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 18px;
+  background: rgba(30, 25, 55, 0.6);
+  border: 1px solid rgba(0, 245, 212, 0.25);
+  border-radius: 12px;
+  cursor: pointer;
+  color: #edeaf6;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+button.launcher-card:hover {
+  border-color: #00f5d4;
+  box-shadow: 0 0 16px rgba(0, 245, 212, 0.25);
+}
+.lc-icon {
+  font-size: 22px;
+}
+.lc-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.lc-desc {
+  font-size: 12px;
+  color: #9d95c9;
+}
+.ssh-list-card {
+  cursor: default;
+}
+/* ---- EXIT ボタン（派手な電源ボタン・接続カードと誤認しないデザイン） ---- */
+.launcher-exit {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 44px 12px;
+  cursor: pointer;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  background: linear-gradient(160deg, #3d0a24, #1c0a14);
+  border: 2px solid #ff1b8d;
+  border-radius: 14px;
+  box-shadow:
+    0 0 18px rgba(255, 27, 141, 0.55),
+    0 0 44px rgba(255, 27, 141, 0.25),
+    inset 0 0 14px rgba(255, 230, 0, 0.12);
+  transition: box-shadow 0.15s, transform 0.1s, border-color 0.15s;
+}
+.launcher-exit:hover {
+  border-color: #ffe600;
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 26px rgba(255, 27, 141, 0.85),
+    0 0 70px rgba(255, 230, 0, 0.4),
+    inset 0 0 20px rgba(255, 230, 0, 0.22);
+}
+.launcher-exit:active {
+  transform: translateY(1px) scale(0.98);
+}
+.launcher-exit .lx-icon {
+  font-size: 26px;
+  line-height: 1;
+  color: #ffe600;
+  text-shadow: 0 0 10px #ffe600, 0 0 24px rgba(255, 230, 0, 0.6);
+}
+.launcher-exit .lx-label {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: #ff1b8d;
+  text-shadow: 0 0 12px rgba(255, 27, 141, 0.9);
+}
+.launcher-exit .lx-sub {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #ffb3d9;
+}
+/* クリック時の短い終了演出（シャットダウンフラッシュ） */
+.launcher-exit.exiting {
+  pointer-events: none;
+  animation: exit-burst 0.35s ease-out forwards;
+}
+@keyframes exit-burst {
+  0%   { box-shadow: 0 0 26px rgba(255,27,141,0.85), 0 0 70px rgba(255,230,0,0.4); transform: scale(1); }
+  40%  { box-shadow: 0 0 60px rgba(255,27,141,1), 0 0 140px rgba(255,230,0,0.8); transform: scale(1.06); }
+  100% { box-shadow: 0 0 10px rgba(255,27,141,0.2); opacity: 0.25; transform: scale(0.94); }
+}
+#launcher.exiting .launcher-panel {
+  animation: launcher-shutdown 0.4s ease-in forwards;
+}
+@keyframes launcher-shutdown {
+  to { opacity: 0; filter: brightness(2.2) saturate(0.3); }
+}
+/* 小さいウィンドウではタイトルとEXITが重ならないよう双方を縮める */
+@media (max-width: 640px) {
+  .launcher-logo { font-size: 20px; }
+  .launcher-exit { padding: 8px 16px 7px; border-radius: 10px; }
+  .launcher-exit .lx-icon { font-size: 16px; }
+  .launcher-exit .lx-label { font-size: 13px; letter-spacing: 3px; }
+  .launcher-exit .lx-sub { font-size: 8px; letter-spacing: 1px; }
+}
+.ssh-profile-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+  max-height: min(240px, 32vh);
+  overflow-y: auto;
+}
+.ssh-empty {
+  color: #6f679a;
+  font-size: 12px;
+  padding: 8px 4px;
+}
+.ssh-profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(13, 11, 20, 0.7);
+  border: 1px solid rgba(255, 230, 0, 0.15);
+  border-radius: 8px;
+}
+.ssh-profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffe600;
+}
+.ssh-profile-target {
+  font-size: 11px;
+  color: #9d95c9;
+  font-family: 'JetBrains Mono', monospace;
+}
+.ssh-profile-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ---- SSH Dialog ---- */
+#ssh-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 6, 16, 0.7);
+}
+#ssh-dialog.hidden {
+  display: none;
+}
+.ssh-dialog-panel {
+  width: min(420px, 92vw);
+  background: #17122b;
+  border: 1px solid rgba(255, 230, 0, 0.4);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ssh-dialog-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffe600;
+}
+.ssh-dialog-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #9d95c9;
+}
+.ssh-dialog-panel input,
+.ssh-dialog-panel select {
+  background: #0d0b14;
+  border: 1px solid rgba(0, 245, 212, 0.25);
+  border-radius: 6px;
+  color: #edeaf6;
+  padding: 7px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+.ssh-dialog-panel input:focus,
+.ssh-dialog-panel select:focus {
+  outline: none;
+  border-color: #00f5d4;
+}
+.ssh-keypath-input {
+  display: flex;
+  gap: 6px;
+}
+.ssh-keypath-input input {
+  flex: 1;
+}
+.ssh-dialog-note {
+  font-size: 11px;
+  color: #6f679a;
+  line-height: 1.5;
+}
+.ssh-dialog-error {
+  font-size: 12px;
+  color: #ff4757;
+  min-height: 14px;
+}
+.ssh-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ---- Reconnect overlay ---- */
+.reconnect-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 6, 16, 0.55);
+  z-index: 5;
+}
+.btn-neon.small {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.btn-neon.dim {
+  opacity: 0.7;
+}
+.hidden {
+  display: none !important;
+}
+
+/* ---- SSH FX status chip (タブ内) ---- */
+.fx-chip {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 2px;
+}
+.fx-chip.fx-on         { color: #2ED573; border: 1px solid rgba(46,213,115,.5); }
+.fx-chip.fx-init       { color: #FFE600; border: 1px solid rgba(255,230,0,.5); }
+.fx-chip.fx-unverified { color: #FFB020; border: 1px solid rgba(255,176,32,.5); }
+.fx-chip.fx-off        { color: #8a84a8; border: 1px solid rgba(138,132,168,.4); }
+.fx-chip.fx-fail       { color: #FF4757; border: 1px solid rgba(255,71,87,.5); }
+
+/* ---- SSH FX status pill ---- */
+.ssh-arm-banner.fade {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.ssh-arm-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #edeaf6;
+  background: rgba(23, 18, 43, 0.95);
+  border: 1px solid rgba(255, 230, 0, 0.45);
+  border-radius: 10px;
+  box-shadow: 0 0 18px rgba(255, 230, 0, 0.15);
+  white-space: nowrap;
+}

@@ -1,0 +1,39 @@
+{
+  "source": "dopa-real/dopa.jpeg",
+  "sourceSize": [
+    1024,
+    640
+  ],
+  "canvas": [
+    4096,
+    2560
+  ],
+  "scale": 4,
+  "pipeline": "edgePreservingFilter + INTER_LANCZOS4 4x + unsharp(0.5, r=2)",
+  "openings": {
+    "terminal": {
+      "x": 812,
+      "y": 472,
+      "w": 2472,
+      "h": 864
+    },
+    "reelL": {
+      "x": 816,
+      "y": 1424,
+      "w": 840,
+      "h": 444
+    },
+    "reelC": {
+      "x": 1740,
+      "y": 1424,
+      "w": 604,
+      "h": 448
+    },
+    "reelR": {
+      "x": 2424,
+      "y": 1424,
+      "w": 860,
+      "h": 448
+    }
+  }
+}

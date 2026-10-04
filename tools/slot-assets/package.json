@@ -1,0 +1,6 @@
+{
+  "name": "dopaterm-slot-assets",
+  "private": true,
+  "description": "Offline generator for the DOPA SLOT cabinet raster assets (not shipped in the app)",
+  "dependencies": { "three": "0.185.0" }
+}

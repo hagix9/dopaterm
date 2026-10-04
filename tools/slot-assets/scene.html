@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<script type="importmap">
+{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }
+</script></head>
+<body style="margin:0;background:#000">
+<script type="module">
+  import * as THREE from 'three';
+  import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+  const p = new URLSearchParams(location.search);
+  window.__done = (async () => {
+    const mod = await import('file://' + p.get('jobs'));
+    const only = (p.get('only') || '').split(',').filter(Boolean);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const env = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
+    const out = [];
+    for (const [name, job] of Object.entries(mod.jobs)) {
+      if (only.length && !only.includes(name)) continue;
+      const res = await job({ THREE, renderer, env, RoomEnvironment });
+      out.push({ name, data: res.canvas.toDataURL('image/png'), w: res.canvas.width, h: res.canvas.height });
+      console.log('rendered', name);
+    }
+    return out;
+  })();
+</script></body></html>

@@ -1,0 +1,75 @@
+{
+  "name": "dopaterm",
+  "version": "0.2.0",
+  "description": "A ridiculously over-the-top terminal with dopamine effects",
+  "type": "module",
+  "main": "dist/electron/main.cjs",
+  "scripts": {
+    "dev:server": "tsx server/index.ts",
+    "dev:client": "vite",
+    "dev": "npm run dev:server",
+    "start": "tsx server/index.ts",
+    "build": "tsc -b && vite build",
+    "build:backend": "tsc -p tsconfig.electron.json && mkdir -p dist/electron && cp electron/main.cjs electron/preload.cjs dist/electron/ && node -e \"require('fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
+    "electron": "npm run build && npm run build:backend && electron .",
+    "electron:rebuild": "electron-rebuild -f -w node-pty",
+    "dist": "npm run build && npm run build:backend && electron-builder",
+    "dist:mac": "npm run dist -- --mac",
+    "dist:win": "npm run dist -- --win --x64 -c.npmRebuild=false",
+    "test": "npm run test:unit && npm run test:smoke && npm run test:remote",
+    "test:remote": "node scripts/test-remote-hooks.mjs",
+    "test:unit": "tsx scripts/test-effects.ts",
+    "test:smoke": "node scripts/smoke-pty.mjs",
+    "preview": "vite preview",
+    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.0.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.0",
+    "@types/node": "^20.17.0",
+    "@types/ws": "^8.5.14",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  },
+  "build": {
+    "appId": "com.dopaterm.app",
+    "productName": "Dopaterm",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**"
+    ],
+    "mac": {
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
