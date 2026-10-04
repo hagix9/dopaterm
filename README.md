@@ -3,6 +3,10 @@
 > **普通に使えるターミナルなのに、何でもないコマンドへ異常に豪華な演出を付ける。**  
 > *実用部分は堅実、演出部分だけ狂わせる。*
 
+![Dopaterm demo](demo/dopaterm-preview.gif)
+
+📹 **フル動画（音声あり・約 29 秒）**: [demo/dopaterm-demo.mp4](demo/dopaterm-demo.mp4)
+
 ---
 
 ## 🎮 概要
