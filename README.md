@@ -274,6 +274,7 @@ npm run dist:win   # Windows x64 (NSIS インストーラー / portable exe)
 - node-pty は `asarUnpack` 済みです
 - 生成物は**コード署名・公証なし**です。macOS では `xattr -cr Dopaterm.app` 等での回避が必要になる場合があります
 - 生成物にはサードパーティの LICENSE（xterm.js / node-pty / ws など）と、Electron / Chromium のライセンス文書が同梱されます
+- Release process: see [RELEASING.md](RELEASING.md)
 
 ## ⚠️ プラットフォーム差分（現状）
 
