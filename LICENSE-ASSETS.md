@@ -10,6 +10,13 @@ Dopaterm の**ソースコード**は 0BSD License（`LICENSE` ファイル）�
   `client/assets/cabinet/` 配下の画像
 - `build/` 配下のアプリケーションアイコン（icon.svg / icon.png / icon.icns / icon.ico）
 - マスコットキャラクター「ターミにゃん」の意匠
+- `demo/` 配下の画像・動画（音声を含む。`dopaterm-preview.gif`・`dopaterm-demo.mp4`）、およびそれらに
+  映っているターミにゃん・筐体デザイン・アイコン等の Dopaterm 固有の視覚素材
+
+上記は、作者が著作権を持つ Dopaterm 固有の素材についての権利留保です。デモ映像に映り込む
+第三者のソフトウェア・フォント・OS の画面表示等について、作者が権利を所有・主張するものではなく、
+それらは各権利者のライセンスに従います。また、`demo/record.mjs` などのデモ用スクリプト（コード）と
+`demo/README.md` は素材ではなく、0BSD の対象です。
 
 ## 条件
 

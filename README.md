@@ -64,9 +64,10 @@ npm start       # HTTP + WebSocket + PTY バックエンドのみ起動
 ### テスト
 
 ```bash
-npm run test:unit   # 単体テスト（バックエンド不要）
-npm start           # 別ターミナルでバックエンドを起動した状態で:
-npm test            # unit + smoke + remote（smoke は 127.0.0.1:4040 のバックエンドが必要）
+npm run test:unit    # 単体テスト（バックエンド不要）
+npm run test:origin  # Origin 検証の回帰テスト（空きポートで自前起動するため事前起動不要）
+npm start            # 別ターミナルでバックエンドを起動した状態で:
+npm test             # unit + origin + smoke + remote（smoke は 127.0.0.1:4040 のバックエンドが必要）
 ```
 
 `npm test` は `/bin/zsh`・`/bin/bash` を使うため macOS / Linux 前提です（全件 PASS を確認したのは macOS のみ。Linux・Windows は未検証）。
@@ -316,9 +317,9 @@ Feel free to take the code and build something completely different with it.
 
 ただし、次のものは 0BSD の対象外（または別条件）です。
 
-- **画像・キャラクター「ターミにゃん」・筐体デザイン・アイコン等の素材**: 0BSD の対象外で、著作権は作者に帰属します。
+- **画像・キャラクター「ターミにゃん」・筐体デザイン・アイコン等の素材（それらが映るデモ映像を含む）**: 0BSD の対象外で、著作権は作者に帰属します。
   ビルド・実行のための複製は可、Dopaterm 以外での再利用・再配布は不可です。詳細は [LICENSE-ASSETS.md](LICENSE-ASSETS.md)
-  （対象: `client/assets/`・`build/`・`dopa-real/dopa.jpeg` など）。コードだけを持ち出す場合はこれらを含めないでください
+  （対象: `client/assets/`・`build/`・`dopa-real/dopa.jpeg`・`demo/` の画像と動画など）。コードだけを持ち出す場合はこれらを含めないでください
 - **サードパーティ依存物**: Third-party dependencies and bundled third-party components remain subject to their respective licenses.
   （Electron・Chromium・xterm.js・node-pty・ws など。それぞれのライセンスに従います）
 - **過去版**: `430aef7` 以前のコミット（v0.2.0 を含む）は MIT License で公開されていました。その版を入手済みの方は、

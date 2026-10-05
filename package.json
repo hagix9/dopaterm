@@ -17,9 +17,10 @@
     "dist": "npm run build && npm run build:backend && electron-builder",
     "dist:mac": "npm run dist -- --mac",
     "dist:win": "npm run dist -- --win --x64 -c.npmRebuild=false",
-    "test": "npm run test:unit && npm run test:smoke && npm run test:remote",
+    "test": "npm run test:unit && npm run test:origin && npm run test:smoke && npm run test:remote",
     "test:remote": "node scripts/test-remote-hooks.mjs",
     "test:unit": "tsx scripts/test-effects.ts",
+    "test:origin": "tsx scripts/test-origin.ts",
     "test:smoke": "node scripts/smoke-pty.mjs",
     "preview": "vite preview",
     "postinstall": "node scripts/fix-pty-perms.mjs"

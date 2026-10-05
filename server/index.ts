@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createPtySession, createCommandSession, ensurePtyReady, IPtySession } from './pty-manager.js';
 import { WsControlMessage } from './types.js';
+import { isAllowedOrigin } from './origin.js';
 import {
   loadProfiles, upsertProfile, deleteProfile, getProfile,
   validateProfileInput, buildSshArgs, SshProfile,
@@ -54,7 +55,7 @@ export async function startBackend(options: { port?: number; staticDir?: string 
     void (async () => {
       // CORS check for loopback only
       const origin = req.headers.origin || '';
-      if (origin.startsWith('http://127.0.0.1') || origin.startsWith('http://localhost')) {
+      if (origin && isAllowedOrigin(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -191,8 +192,7 @@ export async function startBackend(options: { port?: number; staticDir?: string 
     // 1. Origin verification
     const origin = req.headers.origin;
     if (origin) {
-      const isAllowed = origin.startsWith('http://127.0.0.1') || origin.startsWith('http://localhost');
-      if (!isAllowed) {
+      if (!isAllowedOrigin(origin)) {
         console.warn(`[Security] Rejected WebSocket connection from unauthorized Origin: ${origin}`);
         return false;
       }
