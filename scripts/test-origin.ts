@@ -4,6 +4,9 @@
  *
  * 検証:
  *  - isAllowedOrigin（HTTP CORS と WebSocket upgrade 共通 helper）の許可/拒否一覧
+ *  - isAllowedHost（DNS rebinding 対策の Host 判定）と、実際の HTTP / WebSocket 経路での拒否
+ *  - Electron のナビゲーション判定（electron/nav-guard.cjs）の port prefix 攻撃などの拒否
+ *  - 不正トークン試行でも、試行値・正規トークンがログ（console.*）へ出ない
  *  - 実際の HTTP 経路: 許可 Origin にだけ Access-Control-Allow-Origin が付く
  *  - 実際の WebSocket upgrade 経路: 不正 Origin は有効トークンでも拒否、
  *    Origin 無し（CLI 等）は従来どおり許可、トークン検証は維持
@@ -11,9 +14,15 @@
  * バックエンドは空きポート（port 0）で自前起動するため、4040 等の既存サーバーには触れない。
  */
 import * as http from 'node:http';
+import { inspect } from 'node:util';
 import WebSocket from 'ws';
-import { isAllowedOrigin } from '../server/origin.js';
+import { createRequire } from 'node:module';
+import { isAllowedOrigin, isAllowedHost } from '../server/origin.js';
 import { startBackend } from '../server/index.js';
+
+const { isSameOrigin } = createRequire(import.meta.url)('../electron/nav-guard.cjs') as {
+  isSameOrigin: (navUrl: string, allowedOrigin: string) => boolean;
+};
 
 // サーバーが固まってもテスト全体が止まらないようにする
 setTimeout(() => { console.error('test-origin: watchdog timeout'); process.exit(2); }, 60000).unref();
@@ -65,17 +74,56 @@ let threw = false;
 try { for (const o of ['\u0000', '%%%', 'http://[', 'http://a b']) isAllowedOrigin(o); } catch { threw = true; }
 check('malformed Origin で例外を投げない', !threw);
 
+console.log('=== isAllowedHost (helper) ===');
+const HOST_ALLOW = ['127.0.0.1:4040', 'localhost:4040', '127.0.0.1:5173', 'localhost:54321', '127.0.0.1', 'localhost'];
+const HOST_DENY = [
+  'evil.example', 'evil.example:4040', '127.0.0.1.evil.example', '127.0.0.1.evil.example:4040',
+  'localhost.evil.example', 'localhost.evil.example:4040', 'evil-localhost.example', '127.0.0.10', '127.0.0.10:4040',
+  '127.1', '0x7f.0.0.1', '[::1]:4040', 'user@127.0.0.1:4040', '127.0.0.1:4040/path', 'localhost.', 'LOCALHOST:4040',
+  '127.0.0.1:99999', '127.0.0.1:', '', ' ', 'a b', '%%%', '127.0.0.1:80',
+];
+for (const h of HOST_ALLOW) check(`Host 許可: ${h}`, isAllowedHost(h) === true);
+for (const h of HOST_DENY) check(`Host 拒否: ${JSON.stringify(h)}`, isAllowedHost(h) === false);
+
+console.log('=== Electron navigation guard (electron/nav-guard.cjs) ===');
+const AO = 'http://127.0.0.1:54321';
+const NAV_ALLOW = [`${AO}/`, `${AO}`, `${AO}/?token=abc`, `${AO}/a/b?x=1#h`];
+const NAV_DENY = [
+  'http://127.0.0.1:543210/', // port prefix 攻撃
+  'http://127.0.0.1:5432/',
+  'http://127.0.0.1:54321.evil.example/', // 不正 port（parse 失敗）
+  'http://127.0.0.1.evil.example:54321/', // hostname suffix 攻撃
+  'http://127.0.0.1:54321@evil.example/', // userinfo 偽装（実ホストは evil.example）
+  'http://evil.example/',
+  'https://127.0.0.1:54321/', // scheme 違い
+  'http://localhost:54321/',
+  'file:///etc/passwd', 'about:blank', 'javascript:alert(1)', 'not a url', '',
+];
+for (const u of NAV_ALLOW) check(`navigation 許可: ${u}`, isSameOrigin(u, AO) === true);
+for (const u of NAV_DENY) check(`navigation 拒否: ${JSON.stringify(u)}`, isSameOrigin(u, AO) === false);
+
 // ---- 2. 実際の HTTP / WebSocket 経路 ----
+// ログ出力の捕捉（トークン漏洩チェック用）。startBackend はこのプロセス内で動く。
+const captured: string[] = [];
+const origConsole = { log: console.log, warn: console.warn, error: console.error, info: console.info };
+function startCapture() {
+  for (const k of ['log', 'warn', 'error', 'info'] as const) {
+    console[k] = (...a: unknown[]) => { captured.push(a.map((x) => (typeof x === 'string' ? x : inspect(x, { depth: 5 }))).join(' ')); };
+  }
+}
+function stopCapture() { Object.assign(console, origConsole); }
+
 const backend = await startBackend({ port: 0 });
 const { port, token } = backend;
 
-function httpReq(method: string, path: string, origin?: string): Promise<{ status: number; acao: string | undefined }> {
+function httpReq(method: string, path: string, origin?: string, hostHeader?: string): Promise<{ status: number; acao: string | undefined; location: string | undefined }> {
   return new Promise((resolve, reject) => {
     const headers: Record<string, string> = {};
     if (origin !== undefined) headers.Origin = origin;
+    if (hostHeader !== undefined) headers.Host = hostHeader;
     const req = http.request({ host: '127.0.0.1', port, path, method, headers }, (res) => {
       res.resume();
-      res.on('end', () => resolve({ status: res.statusCode ?? 0, acao: res.headers['access-control-allow-origin'] as string | undefined }));
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, acao: res.headers['access-control-allow-origin'] as string | undefined, location: res.headers.location as string | undefined }));
     });
     req.on('error', reject);
     req.setTimeout(5000, () => req.destroy(new Error('timeout')));
@@ -83,9 +131,12 @@ function httpReq(method: string, path: string, origin?: string): Promise<{ statu
   });
 }
 
-function wsTry(path: string, origin?: string): Promise<'open' | 'rejected'> {
+function wsTry(path: string, origin?: string, hostHeader?: string): Promise<'open' | 'rejected'> {
   return new Promise((resolve) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`, origin === undefined ? {} : { headers: { Origin: origin } });
+    const headers: Record<string, string> = {};
+    if (origin !== undefined) headers.Origin = origin;
+    if (hostHeader !== undefined) headers.Host = hostHeader;
+    const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`, { headers });
     const timer = setTimeout(() => { ws.terminate(); resolve('rejected'); }, 4000);
     ws.once('open', () => { clearTimeout(timer); ws.close(); resolve('open'); });
     ws.once('unexpected-response', () => { clearTimeout(timer); resolve('rejected'); });
@@ -125,6 +176,37 @@ try {
   check('許可 Origin + 不正トークン → 拒否（トークン検証は維持）', (await wsTry(ev('0'.repeat(64)), 'http://127.0.0.1:4040')) === 'rejected');
   check('Origin 無し + 不正トークン → 拒否', (await wsTry(ev('wrong'))) === 'rejected');
   check('不正 Origin 拒否後もサーバーは健在', (await wsTry(ev(token), 'http://127.0.0.1:4040')) === 'open');
+
+  console.log('=== Host 検証（実経路 / DNS rebinding 対策） ===');
+  for (const h of [`127.0.0.1:${port}`, `localhost:${port}`, '127.0.0.1:5173' /* Vite dev proxy は Host を転送する */]) {
+    const r = await httpReq('GET', sess, undefined, h);
+    check(`HTTP: 正規 Host を許可: ${h}`, r.status === 200, JSON.stringify(r));
+    check(`WS: 正規 Host を許可: ${h}`, (await wsTry(ev(token), undefined, h)) === 'open');
+  }
+  for (const h of ['evil.example', `evil.example:${port}`, `127.0.0.1.evil.example:${port}`, `localhost.evil.example:${port}`, '127.0.0.10']) {
+    const r = await httpReq('GET', sess, undefined, h);
+    check(`HTTP: 不正 Host を拒否(403): ${h}`, r.status === 403, JSON.stringify(r));
+    check(`WS: 不正 Host を拒否（有効トークンでも）: ${h}`, (await wsTry(ev(token), undefined, h)) === 'rejected');
+  }
+  const redir = await httpReq('GET', '/', undefined, 'evil.example');
+  check("不正 Host では '/' のトークン付きリダイレクトが返らない（rebinding でのトークン取得を防ぐ）", redir.status === 403 && redir.location === undefined, JSON.stringify(redir));
+  const okRedir = await httpReq('GET', '/', undefined, `127.0.0.1:${port}`);
+  check("正規 Host の '/' は従来どおりトークン付きへ 302（ブラウザモード/smoke の前提）", okRedir.status === 302 && /token=[0-9a-f]{64}/.test(okRedir.location ?? ''));
+  check('Host 検証後もサーバーは健在', (await wsTry(ev(token), 'http://127.0.0.1:4040')) === 'open');
+
+  console.log('=== トークンのログ漏洩チェック ===');
+  const attempt = 'LEAKCHECK' + 'f'.repeat(55);
+  startCapture();
+  try {
+    await wsTry(ev(attempt), 'http://127.0.0.1:4040'); // 不正トークン
+    await wsTry(ev(token), 'http://evil.example'); // 不正 Origin（有効トークン）
+    await wsTry(ev(token), undefined, 'evil.example'); // 不正 Host（有効トークン）
+    await httpReq('GET', `/api/session?token=${attempt}`);
+  } finally { stopCapture(); }
+  const logText = captured.join('\n');
+  check('拒否ログが出力されている（検査が空振りでない）', /\[Security\] Rejected/.test(logText));
+  check('試行された不正トークンの値がログに出ない', !logText.includes(attempt));
+  check('正規トークンの値がログに出ない', !logText.includes(token));
 } finally {
   await backend.close();
 }

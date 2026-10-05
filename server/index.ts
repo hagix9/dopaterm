@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createPtySession, createCommandSession, ensurePtyReady, IPtySession } from './pty-manager.js';
 import { WsControlMessage } from './types.js';
-import { isAllowedOrigin } from './origin.js';
+import { isAllowedOrigin, isAllowedHost } from './origin.js';
 import {
   loadProfiles, upsertProfile, deleteProfile, getProfile,
   validateProfileInput, buildSshArgs, SshProfile,
@@ -53,6 +53,14 @@ export async function startBackend(options: { port?: number; staticDir?: string 
 
   const server = http.createServer((req, res) => {
     void (async () => {
+      // DNS rebinding 対策: Host が loopback 名でなければ一切処理しない（'/' のトークン付きリダイレクトも含む）。
+      // Host ヘッダ無し（HTTP/1.0 の CLI 等）は従来どおり許可。ブラウザは必ず Host を送る。
+      if (req.headers.host !== undefined && !isAllowedHost(req.headers.host)) {
+        res.writeHead(403, { 'Content-Type': 'text/plain' });
+        res.end('Forbidden');
+        return;
+      }
+
       // CORS check for loopback only
       const origin = req.headers.origin || '';
       if (origin && isAllowedOrigin(origin)) {
@@ -189,6 +197,12 @@ export async function startBackend(options: { port?: number; staticDir?: string 
     const parsed = url.parse(req.url || '', true);
     const token = parsed.query.token as string;
 
+    // 0. Host verification (DNS rebinding 対策)
+    if (req.headers.host !== undefined && !isAllowedHost(req.headers.host)) {
+      console.warn(`[Security] Rejected WebSocket connection with unexpected Host: ${JSON.stringify(req.headers.host)}`);
+      return false;
+    }
+
     // 1. Origin verification
     const origin = req.headers.origin;
     if (origin) {
@@ -200,7 +214,8 @@ export async function startBackend(options: { port?: number; staticDir?: string 
 
     // 2. Token verification
     if (token !== SERVER_SECRET_TOKEN) {
-      console.warn(`[Security] Rejected WebSocket connection with invalid token: ${token}`);
+      // 試行されたトークン値はログに出さない
+      console.warn('[Security] Rejected WebSocket connection with invalid token');
       return false;
     }
 
@@ -413,12 +428,12 @@ export async function startBackend(options: { port?: number; staticDir?: string 
 // （Electron から require された場合は argv[1] が別パスなので false になる）
 const isDirectRun = !!process.argv[1] && /server[\\/]index\.(ts|js)$/.test(process.argv[1]);
 if (isDirectRun) {
-  startBackend().then(({ port, token, url: accessUrl }) => {
+  startBackend().then(({ port }) => {
     console.log('='.repeat(60));
     console.log('✨ Dopaterm Local Backend Server ✨');
     console.log(`Bound strictly to: http://${HOST}:${port}`);
-    console.log(`Security Token: ${token}`);
-    console.log(`Access URL: ${accessUrl}`);
+    // トークンはログに出さない。開くとトークン付き URL へ自動リダイレクトされる。
+    console.log(`Access URL: http://${HOST}:${port}/`);
     console.log('(Vite dev server が必要な場合は別途 `npm run dev:client` で :5173 を起動)');
     console.log('='.repeat(60));
     console.log(`Backend is ready and listening on ${HOST}:${port}`);

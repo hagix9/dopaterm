@@ -9,6 +9,7 @@
  */
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const { isSameOrigin } = require('./nav-guard.cjs');
 
 let backend = null;
 let mainWindow = null;
@@ -42,7 +43,7 @@ async function createWindow() {
   const allowedOrigin = `http://127.0.0.1:${backend.port}`;
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   mainWindow.webContents.on('will-navigate', (event, navUrl) => {
-    if (!navUrl.startsWith(allowedOrigin)) {
+    if (!isSameOrigin(navUrl, allowedOrigin)) {
       event.preventDefault();
     }
   });
@@ -50,14 +51,21 @@ async function createWindow() {
   // レンダラーのコンソールをメイン側ログへ転送（デバッグ用）
   mainWindow.webContents.on('console-message', (...args) => {
     const text = args.map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
-    console.log('[renderer]', text);
+    // Chromium の WebSocket 失敗メッセージ等は token 付き URL を含み得るため、伏せてから出力する
+    console.log('[renderer]', text.split(backend.token).join('[redacted]'));
   });
 
   if (process.env.DOPATERM_DEVTOOLS === '1') {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
-  await mainWindow.loadURL(backend.url);
+  await mainWindow.loadURL(backend.url).catch((err) => {
+    // Electron のエラーメッセージには読み込み URL（= トークン）が含まれ得るため、伏せてから投げ直す
+    throw Object.assign(new Error(String(err && err.message).split(backend.token).join('[redacted]')), {
+      code: err && err.code,
+      errno: err && err.errno,
+    });
+  });
   console.log(`[Dopaterm] Window loaded: ${allowedOrigin}`);
 }
 

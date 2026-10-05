@@ -11,7 +11,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const out = join(root, 'dist', 'electron');
 
 mkdirSync(out, { recursive: true });
-for (const f of ['main.cjs', 'preload.cjs']) {
+for (const f of ['main.cjs', 'preload.cjs', 'nav-guard.cjs']) {
   copyFileSync(join(root, 'electron', f), join(out, f));
 }
 // dist/ 配下の tsc 出力（server/*.js）は CommonJS として読み込む

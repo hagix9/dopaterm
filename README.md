@@ -58,14 +58,14 @@ npm run build   # dist/client を生成（初回・クライアント変更時�
 npm start       # HTTP + WebSocket + PTY バックエンドのみ起動
 ```
 
-ターミナルに表示されるワンタイムトークン付き URL（`http://127.0.0.1:4040/?token=...`）をブラウザで開きます。
+ターミナルに表示される URL（`http://127.0.0.1:4040/`）をブラウザで開くと、起動ごとに生成されるトークン付き URL へ自動でリダイレクトされます（トークンはログには出力しません）。
 ポートを変えるには環境変数 `DOPATERM_PORT` を指定します。
 
 ### テスト
 
 ```bash
 npm run test:unit    # 単体テスト（バックエンド不要）
-npm run test:origin  # Origin 検証の回帰テスト（空きポートで自前起動するため事前起動不要）
+npm run test:origin  # Origin / Host 検証・Electron ナビゲーション判定・ログ漏洩の回帰テスト（空きポートで自前起動するため事前起動不要）
 npm start            # 別ターミナルでバックエンドを起動した状態で:
 npm test             # unit + origin + smoke + remote（smoke は 127.0.0.1:4040 のバックエンドが必要）
 ```
@@ -81,7 +81,7 @@ npm test             # unit + origin + smoke + remote（smoke は 127.0.0.1:4040
 
 1. **読む**: 見る場所の目安:
    `electron/main.cjs`・`electron/preload.cjs`（Electron 側と公開 IPC）、`server/`（バックエンド。
-   `127.0.0.1` のみ listen、Origin チェック・トークン照合）、`client/index.html`（CSP の `connect-src` は自身とループバック WebSocket のみ）、
+   `127.0.0.1` のみ listen、Origin / Host チェック・トークン照合）、`client/index.html`（CSP の `connect-src` は自身とループバック WebSocket のみ）、
    `package.json` と `package-lock.json`（依存関係とビルド設定）。SSH 接続は OS の `ssh` が行います
 2. **取得して起動**: [ソースから起動](#-ソースから起動run-from-source) の 3 コマンド（`git clone` → `npm ci` → `npm run electron`）
 3. **自分でパッケージを作る**（任意）: [ビルド / パッケージ](#-ビルド--パッケージ) の `npm run dist:win` など
@@ -188,7 +188,7 @@ Dopaterm/
 
 - **コマンドや出力の無改変**: `exitCode`、`stdout`、`stderr` を一切書き換えません。
 - **シェル操作の保証**: 演出エンジンが例外停止しても、PTYおよびシェルプロセスは中断されません。
-- **CSWSH保護**: Loopback（`127.0.0.1`）限定バインド、Originヘッダー検証、暗号セッショントークン照合を完備。
+- **CSWSH保護**: Loopback（`127.0.0.1`）限定バインド、Origin / Host ヘッダー検証（DNS rebinding 対策）、暗号セッショントークン照合を完備。
 - **描画負荷保護**: パーティクル上限（800個クランプ）、イベントスロットル、FPS低下時の自動品質調整を実装。
 
 ---
