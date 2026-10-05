@@ -2,6 +2,7 @@
   "name": "dopaterm",
   "version": "0.2.0",
   "description": "A ridiculously over-the-top terminal with dopamine effects",
+  "license": "0BSD",
   "type": "module",
   "main": "dist/electron/main.cjs",
   "scripts": {
@@ -10,7 +11,7 @@
     "dev": "npm run dev:server",
     "start": "tsx server/index.ts",
     "build": "tsc -b && vite build",
-    "build:backend": "tsc -p tsconfig.electron.json && mkdir -p dist/electron && cp electron/main.cjs electron/preload.cjs dist/electron/ && node -e \"require('fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
+    "build:backend": "tsc -p tsconfig.electron.json && node scripts/prepare-electron-dist.mjs",
     "electron": "npm run build && npm run build:backend && electron .",
     "electron:rebuild": "electron-rebuild -f -w node-pty",
     "dist": "npm run build && npm run build:backend && electron-builder",
@@ -21,7 +22,7 @@
     "test:unit": "tsx scripts/test-effects.ts",
     "test:smoke": "node scripts/smoke-pty.mjs",
     "preview": "vite preview",
-    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true"
+    "postinstall": "node scripts/fix-pty-perms.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

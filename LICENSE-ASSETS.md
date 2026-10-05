@@ -1,7 +1,7 @@
 # Dopaterm アセットの利用条件（Assets License）
 
-Dopaterm の**ソースコード**は MIT License（`LICENSE` ファイル）で公開されていますが、
-以下の素材は MIT の対象外であり、**著作権は hagix9 に帰属します（All Rights Reserved）**。
+Dopaterm の**ソースコード**は 0BSD License（`LICENSE` ファイル）で公開されていますが、
+以下の素材は 0BSD の対象外であり、**著作権は hagix9 に帰属します（All Rights Reserved）**。
 
 ## 対象
 

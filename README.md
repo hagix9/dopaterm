@@ -25,27 +25,92 @@ Dopaterm は、堅実なターミナルエミュレータ（xterm.js + node-pty�
 
 ---
 
-## 🚀 クイックスタート
+## 📥 インストール / ダウンロード
 
-### ソースから起動（開発モード）
+[GitHub Releases](https://github.com/hagix9/dopaterm/releases) から入手できます。
+
+| OS | ファイル |
+|---|---|
+| macOS (Apple Silicon) | `Dopaterm-<version>-arm64.dmg` / `.zip` |
+| Windows (x64) | `Dopaterm.Setup.<version>.exe`（インストーラー）/ `Dopaterm.<version>.exe`（ポータブル） |
+
+配布物は**コード署名・公証なし**のため、macOS Gatekeeper / Windows SmartScreen の警告が出ます。
+配布バイナリを実行したくない場合は、下の [Don't trust the binary? Build it yourself.](#-dont-trust-the-binary-build-it-yourself) へ。
+
+---
+
+## 🚀 ソースから起動（Run from source）
 
 ```bash
-# 依存関係のインストール（初回のみ。node-pty はプリビルトを利用）
-npm install
-
-# ビルド + Electron アプリとして起動
-npm run electron
+git clone https://github.com/hagix9/dopaterm.git
+cd dopaterm
+npm ci               # package-lock.json どおりに依存関係を取得
+npm run electron     # ビルド + Electron 起動
 ```
 
 起動すると接続ランチャーが表示され、**ローカルターミナル**または**SSH接続先**を選んで利用できます。
+前提条件（Node.js / npm / OS ごとの注意）は [Build it yourself](#-dont-trust-the-binary-build-it-yourself) を参照してください。
 
 ### ブラウザモード（デバッグ用）
 
 ```bash
-npm start   # HTTP + WebSocket + PTY バックエンドのみ起動
+npm run build   # dist/client を生成（初回・クライアント変更時。これが無いと UI は配信されません）
+npm start       # HTTP + WebSocket + PTY バックエンドのみ起動
 ```
 
-ターミナルに表示されるワンタイムトークン付き URL（`http://127.0.0.1:4040/`）をブラウザで開きます。
+ターミナルに表示されるワンタイムトークン付き URL（`http://127.0.0.1:4040/?token=...`）をブラウザで開きます。
+ポートを変えるには環境変数 `DOPATERM_PORT` を指定します。
+
+### テスト
+
+```bash
+npm run test:unit   # 単体テスト（バックエンド不要）
+npm start           # 別ターミナルでバックエンドを起動した状態で:
+npm test            # unit + smoke + remote（smoke は 127.0.0.1:4040 のバックエンドが必要）
+```
+
+`npm test` は `/bin/zsh`・`/bin/bash` を使うため macOS / Linux 前提です（全件 PASS を確認したのは macOS のみ。Linux・Windows は未検証）。
+
+---
+
+## 🔍 Don't trust the binary? Build it yourself.
+
+配布の exe / dmg を信用する必要はありません。ソースは全部ここにあります。読んで、自分で依存関係を取得して、
+自分で起動・ビルドできます。
+
+1. **読む**: 見る場所の目安:
+   `electron/main.cjs`・`electron/preload.cjs`（Electron 側と公開 IPC）、`server/`（バックエンド。
+   `127.0.0.1` のみ listen、Origin チェック・トークン照合）、`client/index.html`（CSP の `connect-src` は自身とループバック WebSocket のみ）、
+   `package.json` と `package-lock.json`（依存関係とビルド設定）。SSH 接続は OS の `ssh` が行います
+2. **取得して起動**: [ソースから起動](#-ソースから起動run-from-source) の 3 コマンド（`git clone` → `npm ci` → `npm run electron`）
+3. **自分でパッケージを作る**（任意）: [ビルド / パッケージ](#-ビルド--パッケージ) の `npm run dist:win` など
+
+### 前提条件
+
+| 項目 | 内容 |
+|---|---|
+| Git / Node.js / npm | 検証したのは **Node.js 20.19.4 / npm 10.8.2 のみ**（`npm ci`・テスト・起動・`dist:win`・`dist:mac` すべてこの組み合わせ）。この環境では一部の開発依存（electron-builder 配下の `@electron/rebuild` / `node-abi`）が Node ≥22.12 を宣言しているため、`npm ci` は `EBADENGINE` の警告を出しますが、インストールとビルドは成功します。node-gyp の要求は `^20.17.0 \|\| >=22.9.0` なので Node 20.17 未満は避けてください。Node 22 以降は未検証です |
+| ネットワーク | `npm ci` が npm レジストリと Electron のバイナリ配布元から取得します |
+| node-pty | ネイティブモジュールです。**macOS / Windows 向けのプリビルド（N-API）が同梱**されており、通常の `npm ci` ではコンパイルされません。N-API は ABI 互換のため **`@electron/rebuild` は不要**で、プリビルドのまま Electron 35 上でロードできることを **macOS arm64 で**確認済みです（Windows は未検証） |
+| 追加ツール（通常は不要） | ネイティブコンパイルが走る場面（下記）でのみ Python 3 と C++ ツールチェーンが必要です |
+
+| OS | 状態 |
+|---|---|
+| **macOS** | `npm ci` + `npm run electron` はコンパイラ不要で動作（arm64 / Node 20.19.4 で検証。Intel 用プリビルドも同梱ですが未検証）。`npm run dist` / `dist:mac` は electron-builder が node-pty を Electron 向けに**再コンパイル**するため Xcode Command Line Tools と Python 3 が必要（Python 3.9.6 で検証） |
+| **Windows** | node-pty の win32 プリビルドが同梱されているため、`npm ci` に Visual Studio Build Tools / Python は要らない構成です。`npm ci`・`npm run electron` が動くよう、npm スクリプトは cmd.exe / PowerShell でも動く Node スクリプトにしてあります。**ただし Windows 実機での実行は未検証です**（静的確認のみ） |
+| **Linux** | 公式サポート対象外・**未検証**。node-pty のプリビルドが Linux 用には無く、`npm ci` 時に `node-gyp rebuild` へフォールバックする実装のため、Python 3・make・C++ コンパイラが必要になる実装です（実装の読み取りによる記述で、実行は未検証） |
+
+> 「npm さえ入っていれば必ず動く」とは言いません。上の表が検証できた範囲のすべてです。
+
+`npm run electron:rebuild` は node-pty を Electron 向けにソースから再コンパイルする**任意**のコマンドです（通常は不要。
+コンパイラが必要。macOS で動作確認済み）。
+
+### 同一ソースから作れる ≠ バイナリが一致する
+
+上記の手順で「公開ソースから自分でビルドした Dopaterm」は手に入りますが、**配布物とバイト単位で一致する
+（bit-for-bit reproducible な）ビルドではありません**。ビルド時刻・ツールチェーン・依存関係の解決・パッケージャの
+挙動・コード署名などで差が出ます（実際、同じソースから続けて 2 回ビルドした exe でさえファイルサイズが一致しませんでした）。
+配布バイナリと自作バイナリが同一であることは保証しません。保証するのは「公開ソースだけから自分でビルドして動かせる」ことです。
 
 ---
 
@@ -132,15 +197,12 @@ Dopaterm/
 ブラウザ版に加え、Windows / macOS 向けの Electron 製デスクトップアプリとして動作します。
 Electron のメインプロセス内で既存バックエンド（HTTP+WS+PTY）を起動するため、**Node.js サーバーの手動起動は不要**です。
 
-```bash
-npm install          # 初回のみ（node-pty は electron-rebuild で Electron ABI 向けに再ビルド）
-npm run electron     # ビルド + Electron 起動
-```
+起動方法は [ソースから起動](#-ソースから起動run-from-source) を参照してください。
 
 - 起動すると接続ランチャーが表示され、**ローカルターミナル**または**SSH接続先**を選択できます
 - 複数セッションはタブで切替（ローカルとSSHを並行利用可能）
 - セキュリティ: `contextIsolation`/`sandbox`/`nodeIntegration=false` + CSP。preload 経由で最小限の API（鍵ファイル選択・アプリ情報）のみ公開
-- ブラウザ版は `npm start` で従来通り利用可能（同一バックエンドコードを共有）
+- ブラウザ版も利用可能です（同一バックエンドコードを共有。起動方法は上記「ブラウザモード」）
 
 ### タブ/セッション操作
 - タブバーの **＋** でランチャー再表示 → 新しい接続を追加
@@ -190,17 +252,27 @@ OS標準の `ssh` クライアントを PTY 内で実行します（引数は配
 - ローカルシェルの演出: macOS の zsh/bash で動作。Windows PowerShell はフック未実装のため演出なしの通常ターミナルになります
 - SSH セッションの演出: リモートが zsh/bash の場合に OSC 133 フックを一時注入して動作（接続先のファイルは変更しません）
 
-## 📦 配布パッケージ
+## 📦 ビルド / パッケージ
+
+[electron-builder](https://www.electron.build/) で配布用パッケージを生成します（出力先: `release/`）。
+事前に `npm ci` を済ませてください。
 
 ```bash
-npm run dist       # 現在のOS向けにビルド
+npm run dist       # 現在の OS 向け
 npm run dist:mac   # macOS (.dmg / .zip)
-npm run dist:win   # Windows (NSIS インストーラー / portable)
+npm run dist:win   # Windows x64 (NSIS インストーラー / portable exe)
 ```
 
-- 出力先: `release/`
-- node-pty は `asarUnpack` 済み・N-API プリビルトバイナリ同梱（Windows 向けは macOS からのクロスビルドのためリビルドをスキップする設定）
-- **コード署名/公証は未設定**のため、配布時は macOS Gatekeeper / Windows SmartScreen の警告が出ます。`xattr -cr Dopaterm.app` 等での回避手順が必要です
+| コマンド | 検証状況 |
+|---|---|
+| `npm run dist:mac` | ✅ macOS arm64 で実行・生成物の起動を確認 |
+| `npm run dist:win` | ✅ **macOS 上でのクロスビルド**を実行し、x64 の exe 生成と node-pty の win32 バイナリ同梱を確認。⚠️ **Windows 実機上でのビルド・実行は未検証** |
+
+- `dist:win` は node-pty の再ビルドを行わず、同梱の win32 プリビルドを使います（`-c.npmRebuild=false`）。そのためコンパイラは不要です
+- `dist` / `dist:mac` は node-pty を再コンパイルします（上記「前提条件」）
+- node-pty は `asarUnpack` 済みです
+- 生成物は**コード署名・公証なし**です。macOS では `xattr -cr Dopaterm.app` 等での回避が必要になる場合があります
+- 生成物にはサードパーティの LICENSE（xterm.js / node-pty / ws など）と、Electron / Chromium のライセンス文書が同梱されます
 
 ## ⚠️ プラットフォーム差分（現状）
 
@@ -227,12 +299,34 @@ SSH 初期化エコーの非表示は、ConPTY が再描画で挿入する制御
 - **コード署名・公証なし**: Gatekeeper / SmartScreen の警告が出ます
 - 実 IME（ことえり等）での手動入力・実スピーカーでの音声は未検証（合成経路はテスト済み）
 
-## 📄 ライセンス
+## 📄 License
 
-- **ソースコード**: [MIT License](LICENSE)（Copyright (c) hagix9）
-- **画像・キャラクター等の素材**: MIT の対象外です。`LICENSE-ASSETS.md` を参照してください
-  - 写真筐体の元画像（`dopa-real/dopa.jpeg`）は ChatGPT（OpenAI）の画像生成で作成し、Gemini で調整・ローカルで透過/高解像度化した Dopaterm 独自素材です。実機写真・公式素材は使用していません
-  - `client/assets/`・`build/` 配下の画像はすべて本プロジェクトのために生成したオリジナルです
+**Dopaterm is released under the [0BSD License](LICENSE).**
+
+You are free to copy, modify, redistribute, fork, reuse, or commercially use the Dopaterm code covered by this license,
+including substantial portions of the source code.
+
+Attribution is not required by the 0BSD License.
+
+Feel free to take the code and build something completely different with it.
+
+**日本語での説明**: Dopaterm の作者（hagix9）が著作権を持つ**ソースコード**は 0BSD License です。コピー・改変・再配布・
+フォーク・再利用・商用利用が自由で、ソースの大部分をそのまま持っていっても構いません。著作権表示やライセンス表示の
+添付も（0BSD では）不要です。気に入った部分を持っていって、全然別のものを作ってください。
+
+ただし、次のものは 0BSD の対象外（または別条件）です。
+
+- **画像・キャラクター「ターミにゃん」・筐体デザイン・アイコン等の素材**: 0BSD の対象外で、著作権は作者に帰属します。
+  ビルド・実行のための複製は可、Dopaterm 以外での再利用・再配布は不可です。詳細は [LICENSE-ASSETS.md](LICENSE-ASSETS.md)
+  （対象: `client/assets/`・`build/`・`dopa-real/dopa.jpeg` など）。コードだけを持ち出す場合はこれらを含めないでください
+- **サードパーティ依存物**: Third-party dependencies and bundled third-party components remain subject to their respective licenses.
+  （Electron・Chromium・xterm.js・node-pty・ws など。それぞれのライセンスに従います）
+- **過去版**: `430aef7` 以前のコミット（v0.2.0 を含む）は MIT License で公開されていました。その版を入手済みの方は、
+  引き続き MIT の条件でも利用できます
+
+法的な条件そのものは [LICENSE](LICENSE) が正で、この節は平易な説明です。
+
+---
 
 ## 🙏 謝辞
 

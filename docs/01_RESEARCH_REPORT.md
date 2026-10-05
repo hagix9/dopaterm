@@ -29,7 +29,7 @@ Dopatermのコア設計方針である「**実用部分は堅実、演出部分�
 | 言語・ビルド | **TypeScript + Vite** | MIT | 型安全性の担保と高速なHMR。React/Vue等の重厚なフレームワークは排除し、Vanilla DOM操作で描画遅延を最小化 |
 | ターミナル描画 | **xterm.js (`@xterm/xterm`)** | MIT | VT100/ANSIエスケープシーケンス、IME、キーボード入力のデファクトスタンダード |
 | ターミナル拡張 | **`@xterm/addon-fit`** | MIT | ウィンドウサイズ変更に伴う行・桁（cols/rows）の自動再計算 |
-| マスコット | **インラインSVG + Spring物理 (TS)** | 自作 (MIT) | 外部ライブラリ不要。独自物理パラメータ（stiffness, damping）で弾むアニメーションを軽量描画 |
+| マスコット | **インラインSVG + Spring物理 (TS)** | 自作（コード: 0BSD、キャラクター意匠: LICENSE-ASSETS.md） | 外部ライブラリ不要。独自物理パラメータ（stiffness, damping）で弾むアニメーションを軽量描画 |
 | パーティクル | **HTML5 Canvas 2D** | 標準API | 紙吹雪、星、コイン、飛ぶファイル。オブジェクトプールによりGC負荷をゼロ化 |
 | 背景演出 | **WebGL (Quad Shader) + CSSフォールバック** | 標準API | 虹・サイバー・発光トンネル。Context lost時は自動的にCSSグラデーションに退避 |
 | UIオーバーレイ | **CSS Transitions / Keyframes** | 標準API | カードポップアップ、XPゲージ、コンボバッジ。GPUアクセラレーション (`transform`, `opacity`) |
